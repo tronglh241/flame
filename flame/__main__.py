@@ -15,8 +15,7 @@ if __name__ == '__main__':
     configs = utils.load_yaml(config_path)
     frame = Frame(config_path)
 
-    __extralibs__ = {name: import_module(lib) for (name, lib) in configs.get('extralibs', {}).items()}
-    del configs['extralibs']
+    __extralibs__ = {name: import_module(lib) for (name, lib) in configs.pop('extralibs', {}).items()}
 
     for module_name, module_config in configs.items():
         module = utils.create_instance(module_config)

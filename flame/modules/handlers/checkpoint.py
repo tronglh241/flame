@@ -60,7 +60,7 @@ class BackupSaver(ignite.handlers.ModelCheckpoint, Module):
             assert all(map(lambda x: x in frame, modules)), f'The frame does not have all {modules}'
             
             if 'last_epoch' in modules:
-                raise ValueError('modules should have key last_epoch.')
+                raise ValueError('modules should not have key last_epoch.')
 
             self.frame = frame
             self.modules = modules
@@ -120,8 +120,7 @@ class CheckpointLoader(Module):
             checkpoint = torch.load(self.checkpoint_path)
             
             assert 'engine' in self.frame, 'The frame does not have engine.'
-            self.frame['engine'].engine.state.epoch = checkpoint['last_epoch']
-            del checkpoint['last_epoch']
+            self.frame['engine'].engine.state.epoch = checkpoint.pop('last_epoch')
             
             for module, state_dict in checkpoint.items():
                 self.frame[module].load_state_dict(state_dict)
@@ -137,7 +136,7 @@ class CheckpointLoader(Module):
             for i, path in enumerate(saved_objects):
                 path = Path(path)
                 new_path = Path(saver._dirname).joinpath(path.name)
-                new_path.symlink_to(path.resolve(), target_is_directory=True)
+                new_path.symlink_to(path.resolve())
                 saved_objects[i] = str(new_path)
 
 

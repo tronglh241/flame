@@ -38,7 +38,7 @@ class Trainer(Engine):
         assert 'model' in self.frame, 'The frame does not have model.'
         assert 'optim' in self.frame, 'The frame does not have optim.'
         assert 'loss' in self.frame, 'The frame does not have loss.'
-        self.model = self.frame['model']
+        self.model = self.frame['model'].to(self.device)
         self.optimizer = self.frame['optim']
         self.loss = self.frame['loss']
     
@@ -60,7 +60,7 @@ class Evaluator(Engine):
     '''        
     def init(self):
         assert 'model' in self.frame, 'The frame does not have model.'
-        self.model = self.frame['model']
+        self.model = self.frame['model'].to(self.device)
     
     def _update(self, engine, batch):
         self.model.eval()

@@ -58,8 +58,8 @@ optim:
   TorchOptim:
     optim: torch.optim.SGD
     optim_kwargs:
-      lr: 0.001
-      momentum: 0.0
+      lr: 0.01
+      momentum: 0.9
 
 train_evaluator:
   module: flame.modules.handlers.metric_evaluator
@@ -144,8 +144,8 @@ checkpoint_loader:
   module: flame.modules.handlers.checkpoint
   class: CheckpointLoader
   CheckpointLoader:
-    checkpoint_path: '''checkpoint/MNIST/2002091401/best_model_5_accuracy=0.9107.pth'''
-    mode: '''retrain'''
+    checkpoint_path: ''''''
+    mode: '''train'''
 
 early_stopping:
   module: flame.modules.handlers.early_stopping
