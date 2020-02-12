@@ -123,7 +123,7 @@ best_saver:
     dirname: '''checkpoint/MNIST'''
     score_name: '''accuracy'''
     evaluator_name: '''valid_evaluator'''
-    n_saved: 10
+    n_saved: 2
 
 backup_saver:
   module: flame.modules.handlers.checkpoint
@@ -138,7 +138,7 @@ backup_saver:
     ]
     dirname: '''checkpoint/MNIST'''
     save_interval: 1
-    n_saved: 10
+    n_saved: 1
 
 checkpoint_loader:
   module: flame.modules.handlers.checkpoint
@@ -147,11 +147,25 @@ checkpoint_loader:
     checkpoint_path: ''''''
     mode: '''train'''
 
+terminate_on_nan:
+  module: flame.modules.handlers.terminate_on_nan
+  class: TerminateOnNan
+
+lr_scheduler:
+  module: flame.modules.handlers.lr_scheduler
+  class: ReduceLROnPlateau
+  ReduceLROnPlateau:
+    score_name: '''accuracy'''
+    evaluator_name: '''valid_evaluator'''
+    mode: '''max'''
+    patience: 1
+    verbose: True
+
 early_stopping:
   module: flame.modules.handlers.early_stopping
   class: EarlyStopping
   EarlyStopping:
-    patience: 2
+    patience: 3
     score_name: '''accuracy'''
     evaluator_name: '''valid_evaluator'''
     mode: '''max'''
@@ -162,7 +176,7 @@ engine:
   Trainer:
     dataset_name: '''train'''
     device: '''cpu'''
-    max_epochs: 5
+    max_epochs: 10000
 
 extralibs:
   torch: torch

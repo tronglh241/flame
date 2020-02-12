@@ -23,4 +23,4 @@ class EarlyStopping(ignite.handlers.EarlyStopping, Module):
         assert 'engine' in self.frame, 'The frame does not have engine.'
         assert self.evaluator_name in self.frame, f'The frame does not have {self.evaluator_name}.'
         self.trainer = self.frame['engine'].engine
-        self.frame[self.evaluator_name].engine.add_event_handler(Events.COMPLETED, self)
+        self.frame[self.evaluator_name].engine.add_event_handler(Events.EPOCH_COMPLETED, self)

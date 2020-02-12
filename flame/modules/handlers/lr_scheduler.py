@@ -12,7 +12,7 @@ class ReduceLROnPlateau(Module):
     def init(self):
         assert 'optim' in self.frame, 'The frame does not have optim.'
         self.scheduler = lr_scheduler.ReduceLROnPlateau(self.frame['optim'], **self.kwargs)
-        self.frame['engine'].engine.add_event_handler(Events.COMPLETED, self._step)
+        self.frame['engine'].engine.add_event_handler(Events.EPOCH_COMPLETED, self._step)
 
     def _step(self, engine):
         self.scheduler.step(self.frame[self.evaluator_name].engine.state.metrics[self.score_name])

@@ -20,13 +20,13 @@ class BestSaver(ignite.handlers.ModelCheckpoint, Module):
             mode (str): one of min, max. In min mode, the least score objects will be saved. In max mode, the best score objects will be saved.
         See Ignite ModelCheckpoint for more details about other parameters.
     '''
-    def __init__(self, dirname, score_name, evaluator_name, mode='max', n_saved=1, atomic=True, require_empty=True, create_dir=True, save_as_state_dict=True):
+    def __init__(self, dirname, score_name, evaluator_name, mode='max', n_saved=1, atomic=True, require_empty=True, create_dir=True):
         if mode not in ['min', 'max']:
             raise ValueError(f'mode must be min or max. mode value found is {mode}')
         
         dirname = os.path.join(dirname, datetime.now().strftime('%y%m%d%H%M'))
         
-        super(BestSaver, self).__init__(dirname, 'best', score_function=lambda e: e.state.metrics[score_name] if mode == 'max' else - e.state.metrics[score_name], score_name=score_name, n_saved=n_saved, atomic=atomic, require_empty=require_empty, create_dir=create_dir, save_as_state_dict=save_as_state_dict)
+        super(BestSaver, self).__init__(dirname, 'best', score_function=lambda e: e.state.metrics[score_name] if mode == 'max' else - e.state.metrics[score_name], score_name=score_name, n_saved=n_saved, atomic=atomic, require_empty=require_empty, create_dir=create_dir, global_step_transform=lambda engine, event: self.frame['engine'].engine.state.epoch)
         self.evaluator_name = evaluator_name
 
     def init(self):
@@ -37,14 +37,12 @@ class BestSaver(ignite.handlers.ModelCheckpoint, Module):
     def state_dict(self):
         return {
                 'n_saved': self._n_saved,
-                'saved': self._saved,
-                'iteration': self._iteration
+                'saved': [(priority, filename) for priority, filename in self._saved],
             }
 
     def load_state_dict(self, state_dict):
         self._n_saved = state_dict['n_saved']
-        self._saved = state_dict['saved']
-        self._iteration = state_dict['iteration']
+        self._saved = [ignite.handlers.Checkpoint.Item(priority, filename) for priority, filename in state_dict['saved']]
 
 
 class BackupSaver(ignite.handlers.ModelCheckpoint, Module):
@@ -61,6 +59,9 @@ class BackupSaver(ignite.handlers.ModelCheckpoint, Module):
             
             if 'last_epoch' in modules:
                 raise ValueError('modules should not have key last_epoch.')
+            
+            if 'last_iteration' in modules:
+                raise ValueError('modules should not have key last_iteration.')
 
             self.frame = frame
             self.modules = modules
@@ -68,36 +69,37 @@ class BackupSaver(ignite.handlers.ModelCheckpoint, Module):
         def state_dict(self):
             checkpoint = {module: self.frame[module].state_dict() for module in self.modules}
             checkpoint['last_epoch'] = self.frame['engine'].engine.state.epoch
+            checkpoint['last_iteration'] = self.frame['engine'].engine.state.iteration
             return checkpoint
     
-    def __init__(self, modules, dirname, save_interval, n_saved=1, atomic=True, require_empty=True, create_dir=True, save_as_state_dict=True):
+    def __init__(self, modules, dirname, save_interval, n_saved=1, atomic=True, require_empty=True, create_dir=True):
         dirname = os.path.join(dirname, datetime.now().strftime('%y%m%d%H%M'))
-        super(BackupSaver, self).__init__(dirname, 'backup', save_interval=save_interval, n_saved=n_saved, atomic=atomic, require_empty=require_empty, create_dir=create_dir, save_as_state_dict=save_as_state_dict)
+        super(BackupSaver, self).__init__(dirname, 'backup', n_saved=n_saved, atomic=atomic, require_empty=require_empty, create_dir=create_dir, global_step_transform=lambda engine, event: engine.state.epoch)
         self.modules = modules
+        self.save_interval = save_interval
 
     def init(self):
         assert 'engine' in self.frame, 'The frame does not have engine.'
-        shutil.copy(self.frame.config_path, self._dirname)
+        shutil.copy(self.frame.config_path, self.save_handler.dirname)
         checkpoint = self.Checkpoint(self.modules, self.frame)
-        self.frame['engine'].engine.add_event_handler(Events.EPOCH_COMPLETED, self, {'checkpoint': checkpoint})
-        self.frame['engine'].engine.add_event_handler(Events.EPOCH_COMPLETED, self._correct_checpoint)
+        self.frame['engine'].engine.add_event_handler(Events.EPOCH_COMPLETED(every=self.save_interval), self, {'checkpoint': checkpoint})
+        self.frame['engine'].engine.add_event_handler(Events.EPOCH_COMPLETED(every=self.save_interval), self._correct_checpoint)
 
     def state_dict(self):
         return {
                 'n_saved': self._n_saved,
-                'saved': self._saved,
-                'iteration': self._iteration
+                'saved': [(priority, filename) for priority, filename in self._saved],
             }
 
     def load_state_dict(self, state_dict):
         self._n_saved = state_dict['n_saved']
-        self._saved = state_dict['saved']
-        self._iteration = state_dict['iteration']
+        self._saved = [ignite.handlers.Checkpoint.Item(priority, filename) for priority, filename in state_dict['saved']]
 
     def _correct_checpoint(self, engine):
-        checkpoint_path = self.frame['backup_saver']._saved[-1][1][0]
+        # Use self.frame['backup_saver'].last_checkpoint for next Ignite version
+        checkpoint_path = os.path.join(self.frame['backup_saver'].save_handler.dirname, self.frame['backup_saver']._saved[-1].filename)
         checkpoint = torch.load(checkpoint_path)
-        checkpoint['backup_saver']['saved'] = self.frame['backup_saver']._saved
+        checkpoint['backup_saver']['saved'] = [(priority, filename) for priority, filename in self.frame['backup_saver']._saved]
         torch.save(checkpoint, checkpoint_path)
 
 
@@ -121,6 +123,7 @@ class CheckpointLoader(Module):
             
             assert 'engine' in self.frame, 'The frame does not have engine.'
             self.frame['engine'].engine.state.epoch = checkpoint.pop('last_epoch')
+            self.frame['engine'].engine.state.iteration = checkpoint.pop('last_iteration')
             
             for module, state_dict in checkpoint.items():
                 self.frame[module].load_state_dict(state_dict)
@@ -132,12 +135,10 @@ class CheckpointLoader(Module):
             self.frame['model'].load_state_dict(checkpoint)
 
     def _symlink_checkpoint(self, saver):
-        for priority, saved_objects in saver._saved:
-            for i, path in enumerate(saved_objects):
-                path = Path(path)
-                new_path = Path(saver._dirname).joinpath(path.name)
-                new_path.symlink_to(path.resolve())
-                saved_objects[i] = str(new_path)
+        for i, (priority, filename) in enumerate(saver._saved):
+            fake_file = Path(saver.save_handler.dirname).joinpath(filename)
+            fake_file.symlink_to(f'fake_{filename}')
+            saver._saved[i] = ignite.handlers.Checkpoint.Item(priority, filename)
 
 
 class History(Module):
