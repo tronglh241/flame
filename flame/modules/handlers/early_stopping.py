@@ -24,3 +24,13 @@ class EarlyStopping(ignite.handlers.EarlyStopping, Module):
         assert self.evaluator_name in self.frame, f'The frame does not have {self.evaluator_name}.'
         self.trainer = self.frame['engine'].engine
         self.frame[self.evaluator_name].engine.add_event_handler(Events.EPOCH_COMPLETED, self)
+
+    def state_dict(self):
+        return {
+            'best_score': self.best_score,
+            'counter': self.counter,
+        }
+
+    def load_state_dict(self, state_dict):
+        self.best_score = state_dict['best_score']
+        self.counter = state_dict['counter']

@@ -6,6 +6,3 @@ class Module(object):
 
     def init(self):
         raise NotImplementedError
-
-    def detach(self):
-        pass

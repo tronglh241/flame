@@ -119,7 +119,7 @@ class CheckpointLoader(Module):
 
     def _load_checkpoint(self, engine, mode):
         if mode in ['resume']:
-            checkpoint = torch.load(self.checkpoint_path)
+            checkpoint = torch.load(self.checkpoint_path, map_location='cpu')
             
             assert 'engine' in self.frame, 'The frame does not have engine.'
             self.frame['engine'].engine.state.epoch = checkpoint.pop('last_epoch')
@@ -129,15 +129,15 @@ class CheckpointLoader(Module):
                 self.frame[module].load_state_dict(state_dict)
 
                 if isinstance(self.frame[module], ignite.handlers.ModelCheckpoint):
-                    self._symlink_checkpoint(self.frame[module])
+                    self._fake_saved(self.frame[module])
         elif mode in ['retrain', 'test']:
-            checkpoint = torch.load(self.checkpoint_path)
+            checkpoint = torch.load(self.checkpoint_path, map_location='cpu')
             self.frame['model'].load_state_dict(checkpoint)
 
-    def _symlink_checkpoint(self, saver):
+    def _fake_saved(self, saver):
         for i, (priority, filename) in enumerate(saver._saved):
-            fake_file = Path(saver.save_handler.dirname).joinpath(filename)
-            fake_file.symlink_to(f'fake_{filename}')
+            fake_saved = Path(saver.save_handler.dirname).joinpath(filename)
+            fake_saved.touch()
             saver._saved[i] = ignite.handlers.Checkpoint.Item(priority, filename)
 
 

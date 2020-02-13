@@ -135,6 +135,8 @@ backup_saver:
       backup_saver, 
       best_saver, 
       history,
+      lr_scheduler,
+      early_stopping,
     ]
     dirname: '''checkpoint/MNIST'''
     save_interval: 1
