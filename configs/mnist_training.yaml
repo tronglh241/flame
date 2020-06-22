@@ -116,32 +116,6 @@ history:
   module: flame.modules.handlers.checkpoint
   class: History
 
-best_saver:
-  module: flame.modules.handlers.checkpoint
-  class: BestSaver
-  BestSaver:
-    dirname: '''checkpoint/MNIST'''
-    score_name: '''accuracy'''
-    evaluator_name: '''valid_evaluator'''
-    n_saved: 2
-
-backup_saver:
-  module: flame.modules.handlers.checkpoint
-  class: BackupSaver
-  BackupSaver:
-    modules: [
-      model, 
-      optim, 
-      backup_saver, 
-      best_saver, 
-      history,
-      lr_scheduler,
-      early_stopping,
-    ]
-    dirname: '''checkpoint/MNIST'''
-    save_interval: 1
-    n_saved: 1
-
 checkpoint_loader:
   module: flame.modules.handlers.checkpoint
   class: CheckpointLoader
@@ -171,6 +145,32 @@ early_stopping:
     score_name: '''accuracy'''
     evaluator_name: '''valid_evaluator'''
     mode: '''max'''
+
+best_saver:
+  module: flame.modules.handlers.checkpoint
+  class: BestSaver
+  BestSaver:
+    dirname: '''checkpoint/MNIST'''
+    score_name: '''accuracy'''
+    evaluator_name: '''valid_evaluator'''
+    n_saved: 2
+
+backup_saver:
+  module: flame.modules.handlers.checkpoint
+  class: BackupSaver
+  BackupSaver:
+    modules: [
+      model, 
+      optim, 
+      backup_saver, 
+      best_saver, 
+      history,
+      lr_scheduler,
+      early_stopping,
+    ]
+    dirname: '''checkpoint/MNIST'''
+    save_interval: 1
+    n_saved: 1
 
 engine:
   module: flame.modules.core.engine.engine

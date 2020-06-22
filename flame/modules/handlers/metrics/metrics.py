@@ -1,6 +1,5 @@
 from .... import utils
 from ...module import Module
-from importlib import import_module
 from ignite.engine import Events
 
 
@@ -10,7 +9,7 @@ class Metrics(Module):
 
         if not (len(metric_module) == len(metric_class) and len(metric_module) == len(metric_name) and len(metric_module) == len(metric_params)):
             raise ValueError('Length of metric_module, metric_class, metric_name, metric_params must be the same.')
-        
+
         self.metrics = utils.create_metrics(metric_module, metric_class, metric_name, metric_params)
         self.metric_values = {}
         self.attach_to = attach_to if attach_to else {}
