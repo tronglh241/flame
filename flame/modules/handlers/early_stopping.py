@@ -13,6 +13,7 @@ class EarlyStopping(ignite.handlers.EarlyStopping, Module):
             mode (str): one of min, max. In min mode, running process will be stopped when the quantity monitored has stopped decreasing; in max mode it will be stopped when the quantity monitored has stopped increasing.
         See Ignite EarlyStopping for more details about other parameters.
     '''
+
     def __init__(self, patience, score_name, evaluator_name, mode='max'):
         if mode not in ['min', 'max']:
             raise ValueError(f'mode must be min or max. mode value found is {mode}')

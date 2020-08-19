@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+
 class Module(ABC):
     def attach(self, frame, module_name):
         self.frame = frame

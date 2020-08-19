@@ -14,6 +14,7 @@ class Engine(Module):
             device (str): device on which model and tensor is allocated.
             max_epochs (int): number of epochs training process runs.
     '''
+
     def __init__(self, dataset_name, device, max_epochs=1):
         super(Engine, self).__init__()
         self.dataset_name = dataset_name
@@ -24,16 +25,17 @@ class Engine(Module):
     def run(self):
         assert 'data' in self.frame, 'The frame does not have data.'
         return self.engine.run(self.frame['data'](self.dataset_name), self.max_epochs)
-        
+
     def _update(self, engine, batch):
         raise NotImplementedError
-        
+
 
 class Trainer(Engine):
     '''
         Engine controls training process.
         See Engine documentation for more details about parameters.
     '''
+
     def init(self):
         assert 'model' in self.frame, 'The frame does not have model.'
         assert 'optim' in self.frame, 'The frame does not have optim.'
@@ -41,7 +43,7 @@ class Trainer(Engine):
         self.model = self.frame['model'].to(self.device)
         self.optimizer = self.frame['optim']
         self.loss = self.frame['loss']
-    
+
     def _update(self, engine, batch):
         self.model.train()
         self.optimizer.zero_grad()
@@ -57,11 +59,12 @@ class Evaluator(Engine):
     '''
         Engine controls evaluating process.
         See Engine documentation for more details about parameters.
-    '''        
+    '''
+
     def init(self):
         assert 'model' in self.frame, 'The frame does not have model.'
         self.model = self.frame['model'].to(self.device)
-    
+
     def _update(self, engine, batch):
         self.model.eval()
         with torch.no_grad():

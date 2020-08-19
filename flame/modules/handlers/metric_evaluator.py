@@ -5,7 +5,7 @@ from ignite.engine import Events
 class MetricEvaluator(Evaluator):
     def __init__(self, dataset_name, device):
         super(MetricEvaluator, self).__init__(dataset_name, device)
-    
+
     def init(self):
         assert 'model' in self.frame, 'The frame does not have model.'
         assert 'engine' in self.frame, 'The frame does not have engine.'

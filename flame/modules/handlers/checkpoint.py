@@ -20,12 +20,13 @@ class BestSaver(ignite.handlers.ModelCheckpoint, Module):
             mode (str): one of min, max. In min mode, the least score objects will be saved. In max mode, the best score objects will be saved.
         See Ignite ModelCheckpoint for more details about other parameters.
     '''
+
     def __init__(self, dirname, score_name, evaluator_name, mode='max', n_saved=1, atomic=True, require_empty=True, create_dir=True):
         if mode not in ['min', 'max']:
             raise ValueError(f'mode must be min or max. mode value found is {mode}')
-        
+
         dirname = os.path.join(dirname, datetime.now().strftime('%y%m%d%H%M'))
-        
+
         super(BestSaver, self).__init__(dirname, 'best', score_function=lambda e: e.state.metrics[score_name] if mode == 'max' else - e.state.metrics[score_name], score_name=score_name, n_saved=n_saved, atomic=atomic, require_empty=require_empty, create_dir=create_dir, global_step_transform=lambda engine, event: self.frame['engine'].engine.state.epoch)
         self.evaluator_name = evaluator_name
 
@@ -36,12 +37,12 @@ class BestSaver(ignite.handlers.ModelCheckpoint, Module):
 
     def state_dict(self):
         return {
-                'n_saved': self._n_saved,
-                'saved': [(priority, filename) for priority, filename in self._saved],
-            }
+            'n_saved': self.n_saved,
+            'saved': [(priority, filename) for priority, filename in self._saved],
+        }
 
     def load_state_dict(self, state_dict):
-        self._n_saved = state_dict['n_saved']
+        self.n_saved = state_dict['n_saved']
         self._saved = [ignite.handlers.Checkpoint.Item(priority, filename) for priority, filename in state_dict['saved']]
 
 
@@ -56,10 +57,10 @@ class BackupSaver(ignite.handlers.ModelCheckpoint, Module):
         def __init__(self, modules, frame):
             super(BackupSaver.Checkpoint, self).__init__()
             assert all(map(lambda x: x in frame, modules)), f'The frame does not have all {modules}'
-            
+
             if 'last_epoch' in modules:
                 raise ValueError('modules should not have key last_epoch.')
-            
+
             if 'last_iteration' in modules:
                 raise ValueError('modules should not have key last_iteration.')
 
@@ -71,7 +72,7 @@ class BackupSaver(ignite.handlers.ModelCheckpoint, Module):
             checkpoint['last_epoch'] = self.frame['engine'].engine.state.epoch
             checkpoint['last_iteration'] = self.frame['engine'].engine.state.iteration
             return checkpoint
-    
+
     def __init__(self, modules, dirname, save_interval, n_saved=1, atomic=True, require_empty=True, create_dir=True):
         dirname = os.path.join(dirname, datetime.now().strftime('%y%m%d%H%M'))
         super(BackupSaver, self).__init__(dirname, 'backup', n_saved=n_saved, atomic=atomic, require_empty=require_empty, create_dir=create_dir, global_step_transform=lambda engine, event: engine.state.epoch)
@@ -87,12 +88,12 @@ class BackupSaver(ignite.handlers.ModelCheckpoint, Module):
 
     def state_dict(self):
         return {
-                'n_saved': self._n_saved,
-                'saved': [(priority, filename) for priority, filename in self._saved],
-            }
+            'n_saved': self.n_saved,
+            'saved': [(priority, filename) for priority, filename in self._saved],
+        }
 
     def load_state_dict(self, state_dict):
-        self._n_saved = state_dict['n_saved']
+        self.n_saved = state_dict['n_saved']
         self._saved = [ignite.handlers.Checkpoint.Item(priority, filename) for priority, filename in state_dict['saved']]
 
     def _correct_checpoint(self, engine):
@@ -112,7 +113,6 @@ class CheckpointLoader(Module):
         else:
             raise ValueError('mode must be resume, retrain or test.')
 
-
     def init(self):
         assert 'engine' in self.frame, 'The frame does not have engine.'
         self.frame['engine'].engine.add_event_handler(Events.STARTED, self._load_checkpoint, self.mode)
@@ -120,11 +120,11 @@ class CheckpointLoader(Module):
     def _load_checkpoint(self, engine, mode):
         if mode in ['resume']:
             checkpoint = torch.load(self.checkpoint_path, map_location='cpu')
-            
+
             assert 'engine' in self.frame, 'The frame does not have engine.'
             self.frame['engine'].engine.state.epoch = checkpoint.pop('last_epoch')
             self.frame['engine'].engine.state.iteration = checkpoint.pop('last_iteration')
-            
+
             for module, state_dict in checkpoint.items():
                 self.frame[module].load_state_dict(state_dict)
 

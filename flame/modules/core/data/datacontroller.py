@@ -11,6 +11,6 @@ class DataController(Module):
     def init(self):
         for loader_type, loader_configs in self.configs.items():
             self.dataloaders[loader_type] = utils.create_dataloader(loader_configs)
-    
+
     def __call__(self, loader_type):
         return self.dataloaders[loader_type]

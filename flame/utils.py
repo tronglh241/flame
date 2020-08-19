@@ -9,6 +9,7 @@ def create_dataloader(configs):
     dataloader = DataLoader(dataset, **configs['dataloader'])
     return dataloader
 
+
 def create_metrics(metric_module, metric_class, metric_name, metric_params):
     metrics = {}
     for m_module, m_class, m_name, m_params in zip(metric_module, metric_class, metric_name, metric_params):
@@ -18,6 +19,7 @@ def create_metrics(metric_module, metric_class, metric_name, metric_params):
         metrics[m_name] = getattr(import_module(m_module), m_class)(**m_params)
     return metrics
 
+
 def create_instance(config):
     module = config['module']
     class_ = config['class']
@@ -26,6 +28,7 @@ def create_instance(config):
         if isinstance(value, str):
             config_kwargs[key] = eval(value, __main__.__extralibs__)
     return getattr(import_module(module), class_)(**config_kwargs)
+
 
 def load_yaml(yaml_file):
     import yaml

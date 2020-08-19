@@ -2,6 +2,7 @@ from ..module import Module
 from torch.optim import lr_scheduler
 from ignite.engine import Events
 
+
 class ReduceLROnPlateau(Module):
     def __init__(self, score_name, evaluator_name, **kwargs):
         super(ReduceLROnPlateau, self).__init__()
