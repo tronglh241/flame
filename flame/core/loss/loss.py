@@ -1,16 +1,14 @@
-from ...module import Module
+from abc import ABC, abstractmethod
 
 
-class LossBase(Module):
+class LossBase(ABC):
     def __init__(self, output_transform=lambda x: x):
         super(LossBase, self).__init__()
         self.output_transform = output_transform
 
-    def init(self):
-        pass
-
+    @abstractmethod
     def forward(self, *args):
-        raise NotImplementedError
+        pass
 
     def __call__(self, *args):
         params = self.output_transform(args)

@@ -17,6 +17,7 @@ class BestSaver(ignite.handlers.ModelCheckpoint, Module):
         Parameters:
             dirname (str): directory path. A subfolder will be created in the directory. Your objects will be saved in this subfolder.
             score_name (str): name of a metric attached to the engine what defines how good objects are.
+            evaluator_name (str): name of an engine module specified in config where saver is attached to.
             mode (str): one of min, max. In min mode, the least score objects will be saved. In max mode, the best score objects will be saved.
         See Ignite ModelCheckpoint for more details about other parameters.
     '''
@@ -50,9 +51,11 @@ class BackupSaver(ignite.handlers.ModelCheckpoint, Module):
     '''
         A handler can be used to periodically save objects to disk.
         Parameters:
+            modules (list of str): names of modules that are backed up.
             dirname (str): directory path. A subfolder will be created in the directory. Your objects will be saved in this subfolder.
         See Ignite ModelCheckpoint for more details about other parameters.
     '''
+
     class Checkpoint(object):
         def __init__(self, modules, frame):
             super(BackupSaver.Checkpoint, self).__init__()
@@ -84,7 +87,7 @@ class BackupSaver(ignite.handlers.ModelCheckpoint, Module):
         shutil.copy(self.frame.config_path, self.save_handler.dirname)
         checkpoint = self.Checkpoint(self.modules, self.frame)
         self.frame['engine'].engine.add_event_handler(Events.EPOCH_COMPLETED(every=self.save_interval), self, {'checkpoint': checkpoint})
-        self.frame['engine'].engine.add_event_handler(Events.EPOCH_COMPLETED(every=self.save_interval), self._correct_checpoint)
+        self.frame['engine'].engine.add_event_handler(Events.EPOCH_COMPLETED(every=self.save_interval), self._correct_checkpoint)
 
     def state_dict(self):
         return {
@@ -96,11 +99,10 @@ class BackupSaver(ignite.handlers.ModelCheckpoint, Module):
         self.n_saved = state_dict['n_saved']
         self._saved = [ignite.handlers.Checkpoint.Item(priority, filename) for priority, filename in state_dict['saved']]
 
-    def _correct_checpoint(self, engine):
-        # Use self.frame['backup_saver'].last_checkpoint for next Ignite version
-        checkpoint_path = os.path.join(self.frame['backup_saver'].save_handler.dirname, self.frame['backup_saver']._saved[-1].filename)
+    def _correct_checkpoint(self, engine):
+        checkpoint_path = self.frame[self.module_name].last_checkpoint
         checkpoint = torch.load(checkpoint_path)
-        checkpoint['backup_saver']['saved'] = [(priority, filename) for priority, filename in self.frame['backup_saver']._saved]
+        checkpoint[self.module_name]['saved'] = [(priority, filename) for priority, filename in self.frame[self.module_name]._saved]
         torch.save(checkpoint, checkpoint_path)
 
 
@@ -111,7 +113,7 @@ class CheckpointLoader(Module):
         if mode in ['train', 'resume', 'retrain', 'test']:
             self.mode = mode
         else:
-            raise ValueError('mode must be resume, retrain or test.')
+            raise ValueError('mode must be train, resume, retrain or test.')
 
     def init(self):
         assert 'engine' in self.frame, 'The frame does not have engine.'
@@ -132,6 +134,8 @@ class CheckpointLoader(Module):
                     self._fake_saved(self.frame[module])
         elif mode in ['retrain', 'test']:
             checkpoint = torch.load(self.checkpoint_path, map_location='cpu')
+
+            assert 'model' in self.frame, 'The frame does not have model.'
             self.frame['model'].load_state_dict(checkpoint)
 
     def _fake_saved(self, saver):

@@ -2,6 +2,7 @@ import torch
 
 from ...module import Module
 from ignite import engine as e
+from abc import abstractmethod
 
 
 class Engine(Module):
@@ -15,19 +16,19 @@ class Engine(Module):
             max_epochs (int): number of epochs training process runs.
     '''
 
-    def __init__(self, dataset_name, device, max_epochs=1):
+    def __init__(self, dataset, device, max_epochs=1):
         super(Engine, self).__init__()
-        self.dataset_name = dataset_name
-        self.device = torch.device(device)
+        self.dataset = dataset
+        self.device = device
         self.max_epochs = max_epochs
         self.engine = e.Engine(self._update)
 
     def run(self):
-        assert 'data' in self.frame, 'The frame does not have data.'
-        return self.engine.run(self.frame['data'](self.dataset_name), self.max_epochs)
+        return self.engine.run(self.dataset, self.max_epochs)
 
+    @abstractmethod
     def _update(self, engine, batch):
-        raise NotImplementedError
+        pass
 
 
 class Trainer(Engine):

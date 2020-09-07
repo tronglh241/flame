@@ -1,71 +1,64 @@
 data:
-  module: flame.modules.core.data.datacontroller
-  class: DataController
-  DataController:
-    test:
-      module: torchvision.datasets
-      class: MNIST
-      MNIST:
-        root: '''dataset/MNIST/'''
-        train: False
-        download: True
-        transform: transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
-
-      dataloader:
-        batch_size: 128
-        shuffle: False
+  test:
+    module: torch.utils.data
+    class: DataLoader
+    DataLoader:
+      dataset:
+        module: torchvision.datasets
+        class: MNIST
+        MNIST:
+          root: '''dataset/MNIST/'''
+          train: False
+          download: True
+          transform: transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
+      batch_size: 128
+      shuffle: False
 
 model:
-  module: flame.modules.core.model.net
+  module: flame.core.model.net
   class: Net
 
 metrics:
-  module: flame.modules.handlers.metrics.metrics
+  module: flame.handlers.metrics.metrics
   class: Metrics
   Metrics:
-    metric_module: [
-      flame.modules.handlers.metrics.loss, 
-      ignite.metrics, 
-      ignite.metrics,
-    ]
-    metric_class: [
-      Loss, 
-      Accuracy, 
-      Precision,
-    ]
-    metric_name: [
-      loss, 
-      accuracy, 
-      precision,
-    ]
-    metric_params: [
-      {'loss_fn': torch.nn.NLLLoss()}, 
-      {}, 
-      {'average': True},
-    ]
+    metrics:
+      loss:
+        module: flame.handlers.metrics.loss
+        class: Loss
+        Loss:
+          loss_fn: torch.nn.NLLLoss()
+      accuracy:
+        module: ignite.metrics
+        class: Accuracy
+      precision:
+        module: ignite.metrics
+        class: Precision
+        Precision:
+          average: True
     attach_to:
-      engine: test
+      engine: '''test'''
 
 screenlogger:
-  module: flame.modules.handlers.screenlogger
+  module: flame.handlers.screenlogger
   class: ScreenLogger
   ScreenLogger:
     eval_names: [
-      test,
+      '''test''',
     ]
 
 checkpoint_loader:
-  module: flame.modules.handlers.checkpoint
+  module: flame.handlers.checkpoint
   class: CheckpointLoader
   CheckpointLoader:
-    checkpoint_path: '''checkpoint/MNIST/2002091401/best_model_9_accuracy=0.9303.pth'''
+    checkpoint_path: '''checkpoint/MNIST/2009050834/best_model_9_accuracy=0.9901.pt'''
     mode: '''test'''
 
 engine:
-  module: flame.modules.core.engine.engine
+  module: flame.core.engine.engine
   class: Evaluator
   Evaluator:
-    dataset_name: '''test'''
+    dataset: config['data']['test']
     device: '''cpu'''
 
 extralibs:
