@@ -43,9 +43,8 @@ screenlogger:
   module: flame.handlers.screenlogger
   class: ScreenLogger
   ScreenLogger:
-    eval_names: [
-      '''test''',
-    ]
+    eval_names:
+      - '''test'''
 
 checkpoint_loader:
   module: flame.handlers.checkpoint

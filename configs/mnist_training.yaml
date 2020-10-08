@@ -103,10 +103,9 @@ screenlogger:
   module: flame.handlers.screenlogger
   class: ScreenLogger
   ScreenLogger:
-    eval_names: [
-      '''train''', 
-      '''valid''',
-    ]
+    eval_names:
+      - '''train''' 
+      - '''valid'''
 
 history:
   module: flame.handlers.checkpoint
@@ -155,15 +154,14 @@ backup_saver:
   module: flame.handlers.checkpoint
   class: BackupSaver
   BackupSaver:
-    modules: [
-      '''model''',
-      '''optim''',
-      '''backup_saver''',
-      '''best_saver''',
-      '''history''',
-      '''lr_scheduler''',
-      '''early_stopping''',
-    ]
+    modules:
+      - '''model'''
+      - '''optim'''
+      - '''backup_saver'''
+      - '''best_saver'''
+      - '''history'''
+      - '''lr_scheduler'''
+      - '''early_stopping'''
     dirname: '''checkpoint/MNIST'''
     save_interval: 1
     n_saved: 1
