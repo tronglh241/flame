@@ -1,7 +1,8 @@
 import time
 
-from ..module import Module
 from ignite.engine import Events
+
+from ..module import Module
 
 
 class ScreenLogger(Module):

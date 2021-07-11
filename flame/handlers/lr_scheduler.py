@@ -1,6 +1,7 @@
-from ..module import Module
-from torch.optim import lr_scheduler
 from ignite.engine import Events
+from torch.optim import lr_scheduler
+
+from ..module import Module
 
 
 class ReduceLROnPlateau(Module):

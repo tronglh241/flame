@@ -2,3 +2,5 @@ torch
 torchvision
 pytorch-ignite
 pyyaml
+fvcore
+iopath

@@ -1,15 +1,17 @@
+from abc import abstractmethod
+
 import torch
+from ignite import engine as e
 
 from ...module import Module
-from ignite import engine as e
-from abc import abstractmethod
 
 
 class Engine(Module):
     '''
         Base class for all engines. Your engine should subclass this class.
         Class Engine contains an Ignite Engine that controls running process over a dataset.
-        Method _update is a function receiving the running Ignite Engine and the current batch in each iteration and returns data to be stored in the Ignite Engine's state.
+        Method _update is a function receiving the running Ignite Engine and the current batch in each iteration and
+        returns data to be stored in the Ignite Engine's state.
         Parameters:
             dataset_name (str): dataset which engine run over.
             device (str): device on which model and tensor is allocated.

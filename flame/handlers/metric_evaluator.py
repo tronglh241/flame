@@ -1,5 +1,6 @@
-from ..core.engine.engine import Evaluator
 from ignite.engine import Events
+
+from ..core.engine.engine import Evaluator
 
 
 class MetricEvaluator(Evaluator):

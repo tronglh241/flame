@@ -59,7 +59,7 @@ optim:
   module: torch.optim
   class: SGD
   SGD:
-    params: config['model'].parameters()
+    params: model.parameters()
     lr: 0.01
     momentum: 0.9
 
@@ -67,14 +67,14 @@ train_evaluator:
   module: flame.handlers.metric_evaluator
   class: MetricEvaluator
   MetricEvaluator:
-    dataset: config['data']['train_eval']
+    dataset: data.train_eval
     device: '''cpu'''
 
 valid_evaluator:
   module: flame.handlers.metric_evaluator
   class: MetricEvaluator
   MetricEvaluator:
-    dataset: config['data']['valid']
+    dataset: data.valid
     device: '''cpu'''
 
 metrics:
@@ -170,7 +170,7 @@ engine:
   module: flame.core.engine.engine
   class: Trainer
   Trainer:
-    dataset: config['data']['train']
+    dataset: data.train
     device: '''cpu'''
     max_epochs: 10000
 

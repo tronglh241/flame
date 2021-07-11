@@ -1,5 +1,6 @@
-from ...module import Module
 from ignite.engine import Events
+
+from ...module import Module
 
 
 class Metrics(Module):

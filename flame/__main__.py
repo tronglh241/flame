@@ -1,8 +1,7 @@
-import sys
+import argparse
 
-from . import utils
+from .core.config.config import CfgNode
 from .module import Module
-from importlib import import_module
 
 
 class Frame(dict):
@@ -12,20 +11,21 @@ class Frame(dict):
 
 
 if __name__ == '__main__':
-    config_path = sys.argv[1]
-    config = utils.load_yaml(config_path)
-    frame = Frame(config_path)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('config_file')
+    args = parser.parse_args()
 
-    __extralibs__ = {name: import_module(lib) for (name, lib) in config.pop('extralibs', {}).items()}
-    __extralibs__['config'] = config
+    with open(args.config_file) as f:
+        config = CfgNode.load_cfg(f)
 
-    config = utils.eval_config(config)
+    frame = Frame(args.config_file)
+    modules = config.eval()
 
-    for module_name, module in config.items():
+    for name, module in modules.items():
         if isinstance(module, Module):
-            module.attach(frame, module_name)
+            module.attach(frame, name)
         else:
-            frame[module_name] = module
+            frame[name] = module
 
     for module in frame.values():
         if isinstance(module, Module):
