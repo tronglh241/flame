@@ -73,4 +73,7 @@ class CfgNode(_CfgNode):
         for name_part in name_parts[:-1]:
             dic = dic[name_part]
 
-        del dic[name_parts[-1]]
+        super(CfgNode, dic).__delitem__(name_parts[-1])
+
+
+global_cfg = CfgNode(new_allowed=True)

@@ -1,6 +1,6 @@
 import argparse
 
-from .core.config.config import CfgNode
+from .core.config.config import global_cfg
 from .module import Module
 
 
@@ -15,8 +15,8 @@ if __name__ == '__main__':
     parser.add_argument('config_file')
     args = parser.parse_args()
 
-    with open(args.config_file) as f:
-        config = CfgNode.load_cfg(f)
+    config = global_cfg
+    config.merge_from_file(args.config_file)
 
     frame = Frame(args.config_file)
     modules = config.eval()
