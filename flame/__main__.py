@@ -1,14 +1,7 @@
 import argparse
 
 from .core.config.config import global_cfg
-from .module import Module
-
-
-class Frame(dict):
-    def __init__(self, config_path):
-        super(Frame, self).__init__()
-        self.config_path = config_path
-
+from .core.engine.engine import Engine
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -18,18 +11,13 @@ if __name__ == '__main__':
     config = global_cfg
     config.merge_from_file(args.config_file)
 
-    frame = Frame(args.config_file)
     modules = config.eval()
+    engine = modules.get('engine', None)
 
-    for name, module in modules.items():
-        if isinstance(module, Module):
-            module.attach(frame, name)
-        else:
-            frame[name] = module
+    if engine is None:
+        raise RuntimeError('`engine` can not be found.')
 
-    for module in frame.values():
-        if isinstance(module, Module):
-            module.init()
+    if not isinstance(engine, Engine):
+        raise TypeError('`engine` must be an instance of core Engine.')
 
-    assert 'engine' in frame, 'The frame does not have engine.'
-    frame['engine'].run()
+    engine.run()
