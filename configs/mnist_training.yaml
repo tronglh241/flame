@@ -75,8 +75,103 @@ core:
       device: '''cuda'''
       max_epochs: 100
 
-engine: core.engine
+handlers:
+  evaluator:
+    train:
+      module: flame.core.engine.engine
+      class: Evaluator
+      Evaluator:
+        model: core.model
+        data: core.data.train_eval
+        device : '''cuda'''
+
+    valid:
+      module: flame.core.engine.engine
+      class: Evaluator
+      Evaluator:
+        model: core.model
+        data: core.data.valid
+        device : '''cuda'''
+
+  metrics:
+    loss:
+      module: ignite.metrics
+      class: Loss
+      Loss:
+        loss_fn: torch.nn.NLLLoss()
+
+  logging:
+    tensorboard:
+      train:
+        module: torch.utils.tensorboard
+        class: SummaryWriter
+        SummaryWriter:
+          log_dir: '''runs/MNIST/train'''
+
+      valid:
+        module: torch.utils.tensorboard
+        class: SummaryWriter
+        SummaryWriter:
+          log_dir: '''runs/MNIST/valid'''
+
+setup:
+  evaluator:
+    train:
+      engine: core.engine
+      handler: handlers.evaluator.train.run
+      event: Events.EPOCH_COMPLETED
+
+    valid:
+      engine: core.engine
+      handler: handlers.evaluator.valid.run
+      event: Events.EPOCH_COMPLETED
+
+  metrics:
+    loss:
+      - engine: core.engine
+        handler: handlers.metrics.loss.attach
+        event: Events.STARTED
+        handler_kwargs:
+          engine: handlers.evaluator.train
+          name: '''loss'''
+
+      - engine: core.engine
+        handler: handlers.metrics.loss.attach
+        event: Events.STARTED
+        handler_kwargs:
+          engine: handlers.evaluator.valid
+          name: '''loss'''
+
+  logging:
+    tensorboard:
+      - engine: core.engine
+        handler: handlers.logging.tensorboard.train.add_scalar
+        event: Events.ITERATION_COMPLETED
+        handler_kwargs:
+          tag: '''Training/loss'''
+          scalar_value: core.engine.state.output
+          global_step: core.engine.state.iteration
+
+      - engine: handlers.evaluator.train
+        handler: handlers.logging.tensorboard.train.add_scalar
+        event: Events.COMPLETED
+        handler_kwargs:
+          tag: '''Evaluation/Loss'''
+          scalar_value: handlers.evaluator.train.state.metrics['loss']
+          global_step: core.engine.state.epoch
+
+      - engine: handlers.evaluator.valid
+        handler: handlers.logging.tensorboard.valid.add_scalar
+        event: Events.COMPLETED
+        handler_kwargs:
+          tag: '''Evaluation/Loss'''
+          scalar_value: handlers.evaluator.valid.state.metrics['loss']
+          global_step: core.engine.state.epoch
+
 
 extralibs:
   torch: torch
   transforms: torchvision.transforms
+  Events:
+    module: ignite.engine
+    name: Events
