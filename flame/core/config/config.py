@@ -8,32 +8,34 @@ from ...keywords import (CLASS_KEY, EXTRALIBS_KEY, MODULE_KEY, NAME_KEY,
 
 
 class CfgNode(_CfgNode):
+    @staticmethod
+    def _eval(config: Any, global_context: dict, local_context: dict, eval_all: bool = False) -> Any:
+        if isinstance(config, dict):
+            for key, value in config.items():
+                if eval_all or key not in NOT_EVAL_KEYWORDS:
+                    config[key] = CfgNode._eval(value, global_context, local_context)
+
+            if MODULE_KEY in config and CLASS_KEY in config:
+                module = config[MODULE_KEY]
+                class_ = config[CLASS_KEY]
+                config_kwargs = config.get(class_, {})
+                return getattr(import_module(module), class_)(**config_kwargs)
+
+        elif isinstance(config, list):
+            config = list(map(lambda ele: CfgNode._eval(ele, global_context, local_context), config))
+
+        elif isinstance(config, tuple):
+            config = tuple(map(lambda ele: CfgNode._eval(ele, global_context, local_context), config))
+
+        elif isinstance(config, str):
+            config = eval(config, global_context, local_context)
+
+            if not isinstance(config, str):
+                config = CfgNode._eval(config, global_context, local_context)
+
+        return config
+
     def eval(self) -> Any:
-        def _eval(config: Any) -> Any:
-            if isinstance(config, dict):
-                for key, value in config.items():
-                    if key not in NOT_EVAL_KEYWORDS:
-                        config[key] = _eval(value)
-
-                if MODULE_KEY in config and CLASS_KEY in config:
-                    module = config[MODULE_KEY]
-                    class_ = config[CLASS_KEY]
-                    config_kwargs = config.get(class_, {})
-                    return getattr(import_module(module), class_)(**config_kwargs)
-
-            elif isinstance(config, list):
-                config = list(map(lambda ele: _eval(ele), config))
-
-            elif isinstance(config, tuple):
-                config = tuple(map(lambda ele: _eval(ele), config))
-
-            elif isinstance(config, str):
-                config = eval(config, extralibs, org_config)
-
-                if not isinstance(config, str):
-                    config = _eval(config)
-
-            return config
 
         config = org_config = self.clone()
         extralibs = {}
@@ -50,7 +52,7 @@ class CfgNode(_CfgNode):
             extralibs[alias] = lib
 
         # Eval config
-        config = _eval(config)
+        config = CfgNode._eval(config, extralibs, org_config)
 
         # Remove unnecessary keys
         for rm_key in config.pop(RM_KEY, []):

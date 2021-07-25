@@ -2,6 +2,7 @@ from typing import Any, Callable, Optional, Tuple
 
 from ignite.engine.utils import _check_signature
 
+from ..core.config.config import CfgNode
 from ..core.engine.engine import Engine
 
 
@@ -13,7 +14,7 @@ class HandlerWrapper:
         self._needs_engine: Optional[bool] = None
 
     def _get_args_kwargs(self, engine_: Engine, **kwargs: Any) -> Tuple[tuple, dict]:
-        kwargs = {k: eval(v, {}, self.context) for k, v in kwargs.items()}
+        kwargs = CfgNode._eval(kwargs, {}, self.context, eval_all=True)
         if self._needs_engine is None:
             try:
                 _check_signature(self.handler, 'handler', engine_, **kwargs)

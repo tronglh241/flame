@@ -1,3 +1,6 @@
+utils:
+  datetime_dir: "lambda: datetime.now().strftime('%y%m%d%H%M')"
+
 core:
   data:
     train:
@@ -100,19 +103,80 @@ handlers:
       Loss:
         loss_fn: torch.nn.NLLLoss()
 
+    accuracy:
+      module: ignite.metrics
+      class: Accuracy
+
+    precision:
+      module: ignite.metrics
+      class: Precision
+      Precision:
+        average: True
+
   logging:
     tensorboard:
       train:
         module: torch.utils.tensorboard
         class: SummaryWriter
         SummaryWriter:
-          log_dir: '''runs/MNIST/train'''
+          log_dir: "f'runs/MNIST/{utils.datetime_dir()}/train'"
 
       valid:
         module: torch.utils.tensorboard
         class: SummaryWriter
         SummaryWriter:
-          log_dir: '''runs/MNIST/valid'''
+          log_dir: "f'runs/MNIST/{utils.datetime_dir()}/valid'"
+
+    progress_bar:
+      train:
+        module: ignite.contrib.handlers
+        class: ProgressBar
+        ProgressBar:
+          persist: True
+
+      train_eval:
+        module: ignite.contrib.handlers
+        class: ProgressBar
+        ProgressBar:
+          persist: False
+          desc: '''Train evaluating'''
+
+      valid:
+        module: ignite.contrib.handlers
+        class: ProgressBar
+        ProgressBar:
+          persist: False
+          desc: '''Valid evaluating'''
+
+  early_stopping:
+    module: ignite.handlers
+    class: EarlyStopping
+    EarlyStopping:
+      patience: 3
+      score_function: "lambda engine: - engine.state.metrics['loss']"
+      trainer: core.engine
+
+  checkpoint:
+    best:
+      module: ignite.handlers
+      class: ModelCheckpoint
+      ModelCheckpoint:
+        dirname: "f'checkpoint/MNIST/{utils.datetime_dir()}'"
+        filename_prefix: '''best'''
+        score_function: "lambda engine: - engine.state.metrics['loss']"
+        score_name: '''loss'''
+        n_saved: 1
+        global_step_transform: global_step_from_engine(core.engine, Events.EPOCH_STARTED)
+
+    backup:
+      module: ignite.handlers
+      class: ModelCheckpoint
+      ModelCheckpoint:
+        dirname: "f'checkpoint/MNIST/{utils.datetime_dir()}'"
+        filename_prefix: '''backup'''
+        n_saved: 1
+        global_step_transform: global_step_from_engine(core.engine, Events.EPOCH_STARTED)
+        include_self: True
 
 setup:
   evaluator:
@@ -142,6 +206,36 @@ setup:
           engine: handlers.evaluator.valid
           name: '''loss'''
 
+    accuracy:
+      - engine: core.engine
+        handler: handlers.metrics.accuracy.attach
+        event: Events.STARTED
+        handler_kwargs:
+          engine: handlers.evaluator.train
+          name: '''accuracy'''
+
+      - engine: core.engine
+        handler: handlers.metrics.accuracy.attach
+        event: Events.STARTED
+        handler_kwargs:
+          engine: handlers.evaluator.valid
+          name: '''accuracy'''
+
+    precision:
+      - engine: core.engine
+        handler: handlers.metrics.precision.attach
+        event: Events.STARTED
+        handler_kwargs:
+          engine: handlers.evaluator.train
+          name: '''precision'''
+
+      - engine: core.engine
+        handler: handlers.metrics.precision.attach
+        event: Events.STARTED
+        handler_kwargs:
+          engine: handlers.evaluator.valid
+          name: '''precision'''
+
   logging:
     tensorboard:
       - engine: core.engine
@@ -156,7 +250,7 @@ setup:
         handler: handlers.logging.tensorboard.train.add_scalar
         event: Events.COMPLETED
         handler_kwargs:
-          tag: '''Evaluation/Loss'''
+          tag: '''Evaluation/loss'''
           scalar_value: handlers.evaluator.train.state.metrics['loss']
           global_step: core.engine.state.epoch
 
@@ -164,10 +258,98 @@ setup:
         handler: handlers.logging.tensorboard.valid.add_scalar
         event: Events.COMPLETED
         handler_kwargs:
-          tag: '''Evaluation/Loss'''
+          tag: '''Evaluation/loss'''
           scalar_value: handlers.evaluator.valid.state.metrics['loss']
           global_step: core.engine.state.epoch
 
+      - engine: handlers.evaluator.train
+        handler: handlers.logging.tensorboard.train.add_scalar
+        event: Events.COMPLETED
+        handler_kwargs:
+          tag: '''Evaluation/accuracy'''
+          scalar_value: handlers.evaluator.train.state.metrics['accuracy']
+          global_step: core.engine.state.epoch
+
+      - engine: handlers.evaluator.valid
+        handler: handlers.logging.tensorboard.valid.add_scalar
+        event: Events.COMPLETED
+        handler_kwargs:
+          tag: '''Evaluation/accuracy'''
+          scalar_value: handlers.evaluator.valid.state.metrics['accuracy']
+          global_step: core.engine.state.epoch
+
+      - engine: handlers.evaluator.train
+        handler: handlers.logging.tensorboard.train.add_scalar
+        event: Events.COMPLETED
+        handler_kwargs:
+          tag: '''Evaluation/precision'''
+          scalar_value: handlers.evaluator.train.state.metrics['precision']
+          global_step: core.engine.state.epoch
+
+      - engine: handlers.evaluator.valid
+        handler: handlers.logging.tensorboard.valid.add_scalar
+        event: Events.COMPLETED
+        handler_kwargs:
+          tag: '''Evaluation/precision'''
+          scalar_value: handlers.evaluator.valid.state.metrics['precision']
+          global_step: core.engine.state.epoch
+
+      - engine: core.engine
+        handler: handlers.logging.tensorboard.train.flush
+        event: Events.COMPLETED
+
+      - engine: core.engine
+        handler: handlers.logging.tensorboard.valid.flush
+        event: Events.COMPLETED
+
+    progress_bar:
+      train:
+        engine: core.engine
+        handler: handlers.logging.progress_bar.train.attach
+        event: Events.STARTED
+        handler_kwargs:
+          engine: core.engine
+          output_transform: "lambda x: {'loss': x}"
+
+      train_eval:
+        engine: core.engine
+        handler: handlers.logging.progress_bar.train_eval.attach
+        event: Events.STARTED
+        handler_kwargs:
+          engine: handlers.evaluator.train
+
+      valid:
+        engine: core.engine
+        handler: handlers.logging.progress_bar.valid.attach
+        event: Events.STARTED
+        handler_kwargs:
+          engine: handlers.evaluator.valid
+
+  early_stopping:
+    engine: handlers.evaluator.valid
+    handler: handlers.early_stopping
+    event: Events.COMPLETED
+
+  checkpoint:
+    best:
+      engine: handlers.evaluator.valid
+      handler: handlers.checkpoint.best
+      event: Events.COMPLETED
+      handler_kwargs:
+        to_save:
+          model: core.model
+
+    backup:
+      engine: handlers.evaluator.valid
+      handler: handlers.checkpoint.backup
+      event: Events.COMPLETED
+      handler_kwargs:
+        to_save:
+          model: core.model
+          optim: core.optim
+          best_saver: handlers.checkpoint.best
+          backup_saver: handlers.checkpoint.backup
+          early_stopping: handlers.early_stopping
 
 extralibs:
   torch: torch
@@ -175,3 +357,9 @@ extralibs:
   Events:
     module: ignite.engine
     name: Events
+  global_step_from_engine:
+    module: ignite.handlers
+    name: global_step_from_engine
+  datetime:
+    module: datetime
+    name: datetime
