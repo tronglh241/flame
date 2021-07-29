@@ -7,14 +7,15 @@ from ..core.engine.engine import Engine
 
 
 class HandlerWrapper:
-    def __init__(self, handler: Callable, context: dict):
+    def __init__(self, handler: Callable, global_context: dict, local_context: dict):
         super(HandlerWrapper, self).__init__()
         self.handler = handler
-        self.context = context
+        self.global_context = global_context
+        self.local_context = local_context
         self._needs_engine: Optional[bool] = None
 
     def _get_args_kwargs(self, engine_: Engine, **kwargs: Any) -> Tuple[tuple, dict]:
-        kwargs = CfgNode._eval(kwargs, {}, self.context, eval_all=True)
+        kwargs = CfgNode._eval(CfgNode(kwargs), self.global_context, self.local_context, eval_all=True)
         if self._needs_engine is None:
             try:
                 _check_signature(self.handler, 'handler', engine_, **kwargs)

@@ -9,6 +9,11 @@ HANDLER_KEY = 'handler'
 EVENT_KEY = 'event'
 HANDLER_KWARGS_KEY = 'handler_kwargs'
 
+EVAL_VALUE_KEY = 'eval_value'
+
+CONFIG_KEY = '_config_'
+CHECKPOINTER_KEY = 'checkpointer'
+
 NOT_EVAL_KEYWORDS = [
     MODULE_KEY,
     CLASS_KEY,

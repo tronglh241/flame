@@ -1,10 +1,13 @@
 import argparse
 from typing import Any
 
-from .core.config.config import global_cfg
+import torch
+
+from .core.config.config import CfgNode, global_cfg
 from .core.engine.engine import Engine
 from .handlers.handler_wrapper import HandlerWrapper
-from .keywords import ENGINE_KEY, EVENT_KEY, HANDLER_KEY, HANDLER_KWARGS_KEY
+from .keywords import (CHECKPOINTER_KEY, CONFIG_KEY, ENGINE_KEY, EVENT_KEY,
+                       HANDLER_KEY, HANDLER_KWARGS_KEY)
 
 SETUP_KEYWORDS = [
     ENGINE_KEY,
@@ -13,7 +16,43 @@ SETUP_KEYWORDS = [
 ]
 
 
-def setup(settings: Any, context: dict) -> None:
+def build_modules(config: CfgNode, config_path: str = None, checkpoint_path: str = None, model_key: str = 'core.model',
+                  checkpointer_key: str = 'handlers.checkpoint.backup') -> Any:
+    if config_path is None and checkpoint_path is None:
+        raise RuntimeError('`config_path` or `checkpoint_path` must be specified.')
+
+    if config_path is not None:
+        config.merge_from_file(config_path)
+        modules, extralibs = config.eval()
+
+        if checkpoint_path is not None:
+            checkpoint = torch.load(checkpoint_path)
+            model = modules.get(model_key)
+
+            if model is None:
+                raise RuntimeError(f'{model_key} cannot be found.')
+
+            model.load_state_dict(checkpoint)
+    else:
+        checkpoint = torch.load(checkpoint_path)
+        config.merge_from_other_cfg(CfgNode.load_cfg(checkpoint.pop(CONFIG_KEY)))
+        modules, extralibs = config.eval()
+        checkpointer = checkpoint.pop(CHECKPOINTER_KEY, None)
+
+        if checkpointer is not None:
+            checkpoint[checkpointer_key] = checkpointer
+
+        for key, state_dict in checkpoint.items():
+            module = modules.get(key)
+            if module is not None:
+                module.load_state_dict(state_dict)
+            else:
+                raise RuntimeError(f'{key} cannot be found.')
+
+    return modules, extralibs
+
+
+def setup(settings: Any, global_context: dict, local_context: dict) -> None:
     if isinstance(settings, dict):
         if all([key in settings for key in SETUP_KEYWORDS]):
             engine = settings.get(ENGINE_KEY)
@@ -27,28 +66,28 @@ def setup(settings: Any, context: dict) -> None:
             if not callable(handler):
                 raise TypeError(f'{HANDLER_KEY} needs to be a Callable, {type(handler)} found.')
 
-            engine.add_event_handler(event, HandlerWrapper(handler, context), **kwargs)
+            engine.add_event_handler(event, HandlerWrapper(handler, global_context, local_context), **kwargs)
         else:
             for value in settings.values():
-                setup(value, context)
+                setup(value, global_context, local_context)
     elif isinstance(settings, (list, tuple)):
         for value in settings:
-            setup(value, context)
+            setup(value, global_context, local_context)
     else:
         raise TypeError(f'Only dict, list and tuple are supported in setup procedure, {type(settings)} found.')
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('config_file')
-    parser.add_argument('--engine', '-e', default='core.engine')
-    parser.add_argument('--setup', '-s', default='setup')
+    parser.add_argument('--config', '-f', default=None)
+    parser.add_argument('--checkpoint', '-p', default=None)
+    parser.add_argument('--engine', default='core.engine')
+    parser.add_argument('--model', default='core.model')
+    parser.add_argument('--checkpointer', default='handlers.checkpoint.backup')
+    parser.add_argument('--setup', default='setup')
     args = parser.parse_args()
 
-    config = global_cfg
-    config.merge_from_file(args.config_file)
-
-    modules = config.eval()
+    modules, extralibs = build_modules(global_cfg, args.config, args.checkpoint, args.model, args.checkpointer)
     engine = modules.get(args.engine)
     settings = modules.get(args.setup)
 
@@ -58,5 +97,5 @@ if __name__ == '__main__':
     if not isinstance(engine, Engine):
         raise TypeError('`engine` must be an instance of core Engine.')
 
-    setup(settings, modules)
+    setup(settings, extralibs, modules)
     engine.run()
