@@ -143,9 +143,23 @@ handlers:
     module: ignite.handlers
     class: EarlyStopping
     EarlyStopping:
-      patience: 3
+      patience: 5
       score_function: 'lambda engine: - engine.state.metrics[''loss'']'
       trainer: core.engine
+
+  lr_scheduler:
+    module: torch.optim.lr_scheduler
+    class: ReduceLROnPlateau
+    ReduceLROnPlateau:
+      optimizer: core.optim
+      mode: '''min'''
+      factor: 0.1
+      patience: 2
+      verbose: True
+
+  terminate_on_nan:
+    module: ignite.handlers
+    class: TerminateOnNan
 
   checkpoint:
     best:
@@ -262,6 +276,18 @@ setup:
     handler: handlers.early_stopping
     event: Events.COMPLETED
 
+  lr_scheduler:
+    engine: handlers.evaluator.valid
+    handler: handlers.lr_scheduler.step
+    event: Events.COMPLETED
+    handler_kwargs:
+      metrics: handlers.evaluator.valid.state.metrics['loss']
+
+  terminate_on_nan:
+    engine: core.engine
+    handler: handlers.terminate_on_nan
+    event: Events.ITERATION_COMPLETED
+
   checkpoint:
     best:
       engine: handlers.evaluator.valid
@@ -282,6 +308,7 @@ setup:
           core.optim: core.optim
           handlers.checkpoint.best: handlers.checkpoint.best
           handlers.early_stopping: handlers.early_stopping
+          handlers.lr_scheduler: handlers.lr_scheduler
           handlers.logging.tensorboard.train: handlers.logging.tensorboard.train
           handlers.logging.tensorboard.valid: handlers.logging.tensorboard.valid
           _config_: global_cfg
