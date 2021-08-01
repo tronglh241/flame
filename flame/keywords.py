@@ -1,5 +1,6 @@
 MODULE_KEY = 'module'
 CLASS_KEY = 'class'
+KWARGS_KEY = 'kwargs'
 EXTRALIBS_KEY = 'extralibs'
 NAME_KEY = 'name'
 RM_KEY = 'rm_keys'

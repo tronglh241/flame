@@ -1,10 +1,10 @@
 from importlib import import_module
 from typing import Any, Tuple
 
-from fvcore.common.config import CfgNode as _CfgNode
+from yacs.config import CfgNode as _CfgNode
 
-from ...keywords import (CLASS_KEY, EVAL_VALUE_KEY, EXTRALIBS_KEY, MODULE_KEY,
-                         NAME_KEY, NOT_EVAL_KEYWORDS, RM_KEY)
+from ...keywords import (CLASS_KEY, EVAL_VALUE_KEY, EXTRALIBS_KEY, KWARGS_KEY,
+                         MODULE_KEY, NAME_KEY, NOT_EVAL_KEYWORDS, RM_KEY)
 
 
 class CfgNode(_CfgNode):
@@ -22,7 +22,7 @@ class CfgNode(_CfgNode):
             if MODULE_KEY in config and CLASS_KEY in config:
                 module = config[MODULE_KEY]
                 class_ = config[CLASS_KEY]
-                config_kwargs = config.get(class_, {})
+                config_kwargs = config.get(KWARGS_KEY, {})
                 return getattr(import_module(module), class_)(**config_kwargs)
 
         elif isinstance(config, list):

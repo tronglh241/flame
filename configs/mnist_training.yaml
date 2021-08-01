@@ -3,11 +3,11 @@ core:
     train:
       module: torch.utils.data
       class: DataLoader
-      DataLoader:
+      kwargs:
         dataset:
           module: torchvision.datasets
           class: MNIST
-          MNIST:
+          kwargs:
             root: '''dataset/MNIST/'''
             train: True
             download: True
@@ -18,11 +18,11 @@ core:
     train_eval:
       module: torch.utils.data
       class: DataLoader
-      DataLoader:
+      kwargs:
         dataset:
           module: torchvision.datasets
           class: MNIST
-          MNIST:
+          kwargs:
             root: '''dataset/MNIST/'''
             train: True
             download: True
@@ -33,11 +33,11 @@ core:
     valid:
       module: torch.utils.data
       class: DataLoader
-      DataLoader:
+      kwargs:
         dataset:
           module: torchvision.datasets
           class: MNIST
-          MNIST:
+          kwargs:
             root: '''dataset/MNIST/'''
             train: False
             download: True
@@ -48,7 +48,7 @@ core:
   loss:
     module: flame.core.loss.loss
     class: Loss
-    Loss:
+    kwargs:
       loss_fn:
         module: torch.nn
         class: NLLLoss
@@ -61,7 +61,7 @@ core:
   optim:
     module: torch.optim
     class: SGD
-    SGD:
+    kwargs:
       params: core.model.parameters()
       lr: 0.01
       momentum: 0.9
@@ -69,7 +69,7 @@ core:
   engine:
     module: flame.core.engine.engine
     class: Trainer
-    Trainer:
+    kwargs:
       model: core.model
       data: core.data.train
       loss: core.loss
@@ -82,7 +82,7 @@ handlers:
     train:
       module: flame.core.engine.engine
       class: Evaluator
-      Evaluator:
+      kwargs:
         model: core.model
         data: core.data.train_eval
         device : '''cuda'''
@@ -90,7 +90,7 @@ handlers:
     valid:
       module: flame.core.engine.engine
       class: Evaluator
-      Evaluator:
+      kwargs:
         model: core.model
         data: core.data.valid
         device : '''cuda'''
@@ -99,7 +99,7 @@ handlers:
     loss:
       module: ignite.metrics
       class: Loss
-      Loss:
+      kwargs:
         loss_fn:
           module: torch.nn
           class: NLLLoss
@@ -109,40 +109,40 @@ handlers:
       train:
         module: flame.handlers.tensorboard
         class: SummaryWriter
-        SummaryWriter:
+        kwargs:
           log_dir: '''runs/MNIST/train'''
 
       valid:
         module: flame.handlers.tensorboard
         class: SummaryWriter
-        SummaryWriter:
+        kwargs:
           log_dir: '''runs/MNIST/valid'''
 
     progress_bar:
       train:
         module: ignite.contrib.handlers
         class: ProgressBar
-        ProgressBar:
+        kwargs:
           persist: True
 
       train_eval:
         module: ignite.contrib.handlers
         class: ProgressBar
-        ProgressBar:
+        kwargs:
           persist: False
           desc: '''Train evaluating'''
 
       valid:
         module: ignite.contrib.handlers
         class: ProgressBar
-        ProgressBar:
+        kwargs:
           persist: False
           desc: '''Valid evaluating'''
 
   early_stopping:
     module: ignite.handlers
     class: EarlyStopping
-    EarlyStopping:
+    kwargs:
       patience: 5
       score_function: 'lambda engine: - engine.state.metrics[''loss'']'
       trainer: core.engine
@@ -150,7 +150,7 @@ handlers:
   lr_scheduler:
     module: torch.optim.lr_scheduler
     class: ReduceLROnPlateau
-    ReduceLROnPlateau:
+    kwargs:
       optimizer: core.optim
       mode: '''min'''
       factor: 0.1
@@ -165,7 +165,7 @@ handlers:
     best:
       module: flame.handlers.checkpoint
       class: ModelCheckpoint
-      ModelCheckpoint:
+      kwargs:
         dirname: '''checkpoint/MNIST'''
         filename_prefix: '''best'''
         score_function: 'lambda engine: - engine.state.metrics[''loss'']'
@@ -176,7 +176,7 @@ handlers:
     backup:
       module: flame.handlers.checkpoint
       class: ModelCheckpoint
-      ModelCheckpoint:
+      kwargs:
         dirname: '''checkpoint/MNIST'''
         filename_prefix: '''backup'''
         n_saved: 1
