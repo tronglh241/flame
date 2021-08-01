@@ -7,12 +7,12 @@ flamev2 is a [PyTorch](https://pytorch.org/) training template to help you train
 
 Use the package manager [conda](https://www.anaconda.com/) to setup the environment for flamev2.
 
-```bash
+```
 $ conda create -n <env_name> -c conda-forge -c pytorch --file requirements.txt
 ```
 
 ## Usage
-```bash
+```
 $ python -m flame -h
 usage: __main__.py [-h] [--config CONFIG] [--checkpoint CHECKPOINT]
                    [--engine ENGINE] [--model MODEL]
