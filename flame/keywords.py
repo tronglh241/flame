@@ -15,6 +15,10 @@ EVAL_VALUE_KEY = 'eval_value'
 CONFIG_KEY = '_config_'
 CHECKPOINTER_KEY = 'checkpointer'
 
+DEFAULT_ENGINE = 'core.engine'
+DEFAULT_MODEL = 'core.model'
+DEFAULT_BACKUP_CHECKPOINTER = 'handlers.checkpoint.backup'
+
 NOT_EVAL_KEYWORDS = [
     MODULE_KEY,
     CLASS_KEY,

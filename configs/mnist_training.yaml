@@ -96,13 +96,20 @@ handlers:
         device : '''cuda'''
 
   metrics:
-    loss:
-      module: ignite.metrics
-      class: Loss
-      kwargs:
-        loss_fn:
-          module: torch.nn
-          class: NLLLoss
+    module: flame.handlers.metrics
+    class: Metrics
+    kwargs:
+      evaluators:
+        - handlers.evaluator.train
+        - handlers.evaluator.valid
+      metrics:
+        loss:
+          module: ignite.metrics
+          class: Loss
+          kwargs:
+            loss_fn:
+              module: torch.nn
+              class: NLLLoss
 
   logging:
     tensorboard:
@@ -140,11 +147,12 @@ handlers:
           desc: '''Valid evaluating'''
 
   early_stopping:
-    module: ignite.handlers
+    module: flame.handlers.early_stopping
     class: EarlyStopping
     kwargs:
       patience: 5
-      score_function: 'lambda engine: - engine.state.metrics[''loss'']'
+      score_name: '''loss'''
+      mode: '''min'''
       trainer: core.engine
 
   lr_scheduler:
@@ -164,24 +172,28 @@ handlers:
   checkpoint:
     best:
       module: flame.handlers.checkpoint
-      class: ModelCheckpoint
+      class: BestCheckpointer
       kwargs:
         dirname: '''checkpoint/MNIST'''
-        filename_prefix: '''best'''
-        score_function: 'lambda engine: - engine.state.metrics[''loss'']'
         score_name: '''loss'''
+        mode: '''min'''
         n_saved: 1
-        global_step_transform: global_step_from_engine(core.engine, Events.EPOCH_STARTED)
 
     backup:
       module: flame.handlers.checkpoint
-      class: ModelCheckpoint
+      class: BackupCheckpointer
       kwargs:
         dirname: '''checkpoint/MNIST'''
-        filename_prefix: '''backup'''
         n_saved: 1
-        global_step_transform: global_step_from_engine(core.engine, Events.EPOCH_STARTED)
-        include_self: True
+        saved_module_keys:
+          - '''core.engine'''
+          - '''core.model'''
+          - '''core.optim'''
+          - '''handlers.checkpoint.best'''
+          - '''handlers.early_stopping'''
+          - '''handlers.lr_scheduler'''
+          - '''handlers.logging.tensorboard.train'''
+          - '''handlers.logging.tensorboard.valid'''
 
 setup:
   evaluator:
@@ -196,20 +208,9 @@ setup:
       event: Events.EPOCH_COMPLETED
 
   metrics:
-    loss:
-      - engine: core.engine
-        handler: handlers.metrics.loss.attach
-        event: Events.STARTED
-        handler_kwargs:
-          engine: handlers.evaluator.train
-          name: '''loss'''
-
-      - engine: core.engine
-        handler: handlers.metrics.loss.attach
-        event: Events.STARTED
-        handler_kwargs:
-          engine: handlers.evaluator.valid
-          name: '''loss'''
+    engine: core.engine
+    handler: handlers.metrics
+    event: Events.STARTED
 
   logging:
     tensorboard:
@@ -293,34 +294,14 @@ setup:
       engine: handlers.evaluator.valid
       handler: handlers.checkpoint.best
       event: Events.COMPLETED
-      handler_kwargs:
-        to_save:
-          model: core.model
 
     backup:
       engine: handlers.evaluator.valid
       handler: handlers.checkpoint.backup
       event: Events.COMPLETED
-      handler_kwargs:
-        to_save:
-          core.engine: core.engine
-          core.model: core.model
-          core.optim: core.optim
-          handlers.checkpoint.best: handlers.checkpoint.best
-          handlers.early_stopping: handlers.early_stopping
-          handlers.lr_scheduler: handlers.lr_scheduler
-          handlers.logging.tensorboard.train: handlers.logging.tensorboard.train
-          handlers.logging.tensorboard.valid: handlers.logging.tensorboard.valid
-          _config_: global_cfg
 
 extralibs:
   transforms: torchvision.transforms
   Events:
     module: ignite.engine
     name: Events
-  global_step_from_engine:
-    module: ignite.handlers
-    name: global_step_from_engine
-  global_cfg:
-    module: flame.core.config.config
-    name: global_cfg

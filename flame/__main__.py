@@ -6,8 +6,10 @@ import torch
 from .core.config.config import CfgNode, global_cfg
 from .core.engine.engine import Engine
 from .handlers.handler_wrapper import HandlerWrapper
-from .keywords import (CHECKPOINTER_KEY, CONFIG_KEY, ENGINE_KEY, EVENT_KEY,
-                       HANDLER_KEY, HANDLER_KWARGS_KEY)
+from .keywords import (CHECKPOINTER_KEY, CONFIG_KEY,
+                       DEFAULT_BACKUP_CHECKPOINTER, DEFAULT_ENGINE,
+                       DEFAULT_MODEL, ENGINE_KEY, EVENT_KEY, HANDLER_KEY,
+                       HANDLER_KWARGS_KEY)
 
 SETUP_KEYWORDS = [
     ENGINE_KEY,
@@ -16,8 +18,8 @@ SETUP_KEYWORDS = [
 ]
 
 
-def build_modules(config: CfgNode, config_path: str = None, checkpoint_path: str = None, model_key: str = 'core.model',
-                  checkpointer_key: str = 'handlers.checkpoint.backup') -> Any:
+def build_modules(config: CfgNode, config_path: str = None, checkpoint_path: str = None, model_key: str = DEFAULT_MODEL,
+                  checkpointer_key: str = DEFAULT_BACKUP_CHECKPOINTER) -> Any:
     if config_path is None and checkpoint_path is None:
         raise RuntimeError('`config_path` or `checkpoint_path` must be specified.')
 
@@ -81,9 +83,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', '-f', default=None)
     parser.add_argument('--checkpoint', '-p', default=None)
-    parser.add_argument('--engine', default='core.engine')
-    parser.add_argument('--model', default='core.model')
-    parser.add_argument('--checkpointer', default='handlers.checkpoint.backup')
+    parser.add_argument('--engine', default=DEFAULT_ENGINE)
+    parser.add_argument('--model', default=DEFAULT_MODEL)
+    parser.add_argument('--checkpointer', default=DEFAULT_BACKUP_CHECKPOINTER)
     parser.add_argument('--setup', default='setup')
     args = parser.parse_args()
 

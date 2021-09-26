@@ -2,8 +2,8 @@ from typing import Any, Callable, Optional, Tuple
 
 from ignite.engine.utils import _check_signature
 
-from ..core.config.config import CfgNode
-from ..core.engine.engine import Engine
+from flame.core.config.config import CfgNode
+from flame.core.engine.engine import Engine
 
 
 class HandlerWrapper:

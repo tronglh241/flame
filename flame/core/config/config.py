@@ -3,15 +3,12 @@ from typing import Any, Tuple
 
 from yacs.config import CfgNode as _CfgNode
 
-from ...keywords import (CLASS_KEY, EVAL_VALUE_KEY, EXTRALIBS_KEY, KWARGS_KEY,
-                         MODULE_KEY, NAME_KEY, NOT_EVAL_KEYWORDS, RM_KEY)
+from flame.keywords import (CLASS_KEY, EVAL_VALUE_KEY, EXTRALIBS_KEY,
+                            KWARGS_KEY, MODULE_KEY, NAME_KEY,
+                            NOT_EVAL_KEYWORDS, RM_KEY)
 
 
 class CfgNode(_CfgNode):
-    def __init__(self, *args, **kwargs):
-        super(CfgNode, self).__init__(*args, **kwargs)
-        self.__dict__[EVAL_VALUE_KEY] = None
-
     @staticmethod
     def _eval(config: Any, global_context: dict, local_context: dict, eval_all: bool = False) -> Any:
         if isinstance(config, dict):
@@ -35,7 +32,7 @@ class CfgNode(_CfgNode):
 
     def eval(self) -> Tuple[Any, dict]:
         # If config was evaluated, return evaluated value
-        if self.__dict__[EVAL_VALUE_KEY] is not None:
+        if self.__dict__.get(EVAL_VALUE_KEY) is not None:
             return self.__dict__[EVAL_VALUE_KEY]
 
         config = org_config = self.clone()
@@ -52,6 +49,9 @@ class CfgNode(_CfgNode):
 
             extralibs[alias] = lib
 
+        # Save config
+        self.__dict__[EVAL_VALUE_KEY] = config, extralibs
+
         # Eval config
         config = CfgNode._eval(config, extralibs, org_config)
 
@@ -60,8 +60,6 @@ class CfgNode(_CfgNode):
             for rm_key in config.pop(RM_KEY, []):
                 del config[rm_key]
 
-        # Save evaluated config and freeze config
-        self.__dict__[EVAL_VALUE_KEY] = config
         self.freeze()
 
         return config, extralibs
