@@ -9,6 +9,7 @@ Use the package manager [conda](https://www.anaconda.com/) to setup the environm
 
 ```
 $ conda create -n <env_name> -c conda-forge -c pytorch --file requirements.txt
+$ pip install -r pip-requirements.txt
 ```
 
 ## Usage
