@@ -1,5 +1,5 @@
 import argparse
-from typing import Any
+from typing import Any, Mapping
 
 import torch
 
@@ -18,38 +18,42 @@ SETUP_KEYWORDS = [
 ]
 
 
-def build_modules(config: CfgNode, config_path: str = None, checkpoint_path: str = None, model_key: str = DEFAULT_MODEL,
-                  checkpointer_key: str = DEFAULT_BACKUP_CHECKPOINTER) -> Any:
+def build_modules(config_path: str = None, checkpoint_path: str = None, model_key: str = DEFAULT_MODEL,
+                  checkpointer_key: str = DEFAULT_BACKUP_CHECKPOINTER, strict: bool = True) -> Any:
+    def _load_module(key: str, state_dict: Mapping):
+        module = global_cfg.eval_key(key)
+
+        if module is not None:
+            module.load_state_dict(state_dict)
+        elif strict:
+            raise NameError(f'{key} cannot be found.')
+
     if config_path is None and checkpoint_path is None:
         raise RuntimeError('`config_path` or `checkpoint_path` must be specified.')
 
     if config_path is not None:
-        config.merge_from_file(config_path)
-        modules, extralibs = config.eval()
+        global_cfg.merge_from_file(config_path)
+        modules, extralibs = global_cfg.eval()
 
         if checkpoint_path is not None:
             checkpoint = torch.load(checkpoint_path)
-            model = modules.get(model_key)
 
-            if model is None:
-                raise RuntimeError(f'{model_key} cannot be found.')
-
-            model.load_state_dict(checkpoint)
+            try:
+                _load_module(model_key, checkpoint)
+            except Exception:
+                for key, state_dict in checkpoint.items():
+                    _load_module(key, state_dict)
     else:
         checkpoint = torch.load(checkpoint_path)
-        config.merge_from_other_cfg(CfgNode.load_cfg(checkpoint.pop(CONFIG_KEY)))
-        modules, extralibs = config.eval()
+        global_cfg.merge_from_other_cfg(CfgNode.load_cfg(checkpoint.pop(CONFIG_KEY)))
+        modules, extralibs = global_cfg.eval()
         checkpointer = checkpoint.pop(CHECKPOINTER_KEY, None)
 
         if checkpointer is not None:
             checkpoint[checkpointer_key] = checkpointer
 
         for key, state_dict in checkpoint.items():
-            module = modules.get(key)
-            if module is not None:
-                module.load_state_dict(state_dict)
-            else:
-                raise RuntimeError(f'{key} cannot be found.')
+            _load_module(key, state_dict)
 
     return modules, extralibs
 
@@ -86,12 +90,13 @@ if __name__ == '__main__':
     parser.add_argument('--engine', default=DEFAULT_ENGINE)
     parser.add_argument('--model', default=DEFAULT_MODEL)
     parser.add_argument('--checkpointer', default=DEFAULT_BACKUP_CHECKPOINTER)
+    parser.add_argument('--not-strict', action='store_true')
     parser.add_argument('--setup', default='setup')
     args = parser.parse_args()
 
-    modules, extralibs = build_modules(global_cfg, args.config, args.checkpoint, args.model, args.checkpointer)
-    engine = modules.get(args.engine)
-    settings = modules.get(args.setup)
+    modules, extralibs = build_modules(args.config, args.checkpoint, args.model, args.checkpointer, not args.not_strict)
+    engine = global_cfg.eval_key(args.engine)
+    settings = global_cfg.eval_key(args.setup)
 
     if engine is None:
         raise RuntimeError('`engine` cannot be found.')

@@ -17,8 +17,7 @@ class ModelCheckpoint(_ModelCheckpoint):
         dirname = os.path.join(dirname, datetime.now().strftime('%y%m%d%H%M'))
 
         if global_step_transform is None:
-            modules, _ = global_cfg.eval()
-            engine = modules.get(DEFAULT_ENGINE)
+            engine = global_cfg.eval_key(DEFAULT_ENGINE)
             global_step_transform = global_step_from_engine(engine, Events.EPOCH_STARTED)
 
         self.saved_modules = saved_modules
@@ -38,7 +37,7 @@ class ModelCheckpoint(_ModelCheckpoint):
 
 
 class BestCheckpointer(ModelCheckpoint):
-    def __init__(self, dirname: str, score_name: str, mode: str, n_saved: int = 1, model_key: str = DEFAULT_MODEL,
+    def __init__(self, dirname: str, score_name: str, mode: str, n_saved: int = 1, saved_module_keys: str = None,
                  global_step_transform: Callable = None, **kwargs):
         if mode not in {'min', 'max'}:
             raise ValueError(f'mode {mode} is unknown!')
@@ -48,10 +47,12 @@ class BestCheckpointer(ModelCheckpoint):
         else:
             score_function = lambda engine: engine.state.metrics[score_name]  # noqa: E731
 
-        modules, _ = global_cfg.eval()
-        saved_modules = {
-            'model': modules.get(model_key)
-        }
+        if saved_module_keys is None:
+            saved_modules = {
+                'model': global_cfg.eval_key(DEFAULT_MODEL)
+            }
+        else:
+            saved_modules = {k: global_cfg.eval_key(k) for k in saved_module_keys}
 
         super(BestCheckpointer, self).__init__(dirname, saved_modules, filename_prefix='best',
                                                score_function=score_function, score_name=score_name, n_saved=n_saved,
@@ -62,8 +63,7 @@ class BestCheckpointer(ModelCheckpoint):
 class BackupCheckpointer(ModelCheckpoint):
     def __init__(self, dirname: str, saved_module_keys: List[str], n_saved: int = 1,
                  global_step_transform: Callable = None, **kwargs):
-        modules, _ = global_cfg.eval()
-        saved_modules = {k: modules.get(k) for k in saved_module_keys}
+        saved_modules = {k: global_cfg.eval_key(k) for k in saved_module_keys}
         saved_modules[CONFIG_KEY] = global_cfg
 
         super(BackupCheckpointer, self).__init__(dirname, saved_modules, filename_prefix='backup', n_saved=n_saved,

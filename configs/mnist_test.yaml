@@ -29,17 +29,23 @@ core:
 
 handlers:
   metrics:
-    loss:
-      module: ignite.metrics
-      class: Loss
-      kwargs:
-        loss_fn:
-          module: torch.nn
-          class: NLLLoss
+    module: flame.handlers.metrics
+    class: Metrics
+    kwargs:
+      evaluators:
+        - core.engine
+      metrics:
+        loss:
+          module: ignite.metrics
+          class: Loss
+          kwargs:
+            loss_fn:
+              module: torch.nn
+              class: NLLLoss
 
-    accuracy:
-      module: ignite.metrics
-      class: Accuracy
+        accuracy:
+          module: ignite.metrics
+          class: Accuracy
 
   logging:
     progress_bar:
@@ -52,19 +58,8 @@ setup:
   metrics:
     loss:
       engine: core.engine
-      handler: handlers.metrics.loss.attach
+      handler: handlers.metrics
       event: Events.STARTED
-      handler_kwargs:
-        engine: core.engine
-        name: '''loss'''
-
-    accuracy:
-      engine: core.engine
-      handler: handlers.metrics.accuracy.attach
-      event: Events.STARTED
-      handler_kwargs:
-        engine: core.engine
-        name: '''accuracy'''
 
   logging:
     progress_bar:

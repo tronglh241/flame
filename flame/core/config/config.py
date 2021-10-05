@@ -64,6 +64,16 @@ class CfgNode(_CfgNode):
 
         return config, extralibs
 
+    def eval_key(self, key: str) -> Any:
+        config, extralibs = self.eval()
+
+        try:
+            value = eval(key, {}, {**config, **extralibs})
+        except Exception:
+            value = None
+
+        return value
+
     def __delitem__(self, name: str) -> None:
         name_parts = name.split('.')
         dic = self
