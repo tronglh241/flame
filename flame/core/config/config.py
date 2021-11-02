@@ -26,7 +26,7 @@ class CfgNode(_CfgNode):
             config = list(map(lambda ele: CfgNode._eval(ele, global_context, local_context), config))
 
         elif isinstance(config, str):
-            config = eval(config, global_context, local_context)
+            config = eval(config, {**global_context, **local_context})
 
         return config
 

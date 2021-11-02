@@ -7,18 +7,28 @@ from torch.nn import Module
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 
+from ..model.model_wrapper import ModelWrapper
+
 
 class Engine(e.Engine, ABC):
-    def __init__(self, model: Module, data: DataLoader, device: Any = 'cpu', max_epochs: int = None,
-                 epoch_length: int = None):
+    def __init__(
+        self,
+        model: Module,
+        data: DataLoader,
+        device: Any = 'cpu',
+        max_epochs: int = None,
+        epoch_length: int = None,
+        input_transform: Callable = lambda x: (x[0],),
+    ):
         super(Engine, self).__init__(self.process)
-        self.model = model
+        self._model = model
         self.data = data
         self.device = device
         self.max_epochs = max_epochs
         self.epoch_length = epoch_length
 
-        self.model.to(self.device)
+        self._model.to(self.device)
+        self.model = ModelWrapper(self._model, input_transform)
 
     def run(self) -> e.State:
         return super(Engine, self).run(self.data, self.max_epochs, self.epoch_length)
@@ -38,7 +48,7 @@ class Trainer(Engine):
         self.model.train()
         self.optim.zero_grad()
         params = [param.to(self.device) if torch.is_tensor(param) else param for param in batch]
-        params[0] = self.model(params[0])
+        params[0] = self.model(*params)
         loss = self.loss(*params)
         loss.backward()
         self.optim.step()
@@ -50,5 +60,5 @@ class Evaluator(Engine):
         self.model.eval()
         with torch.no_grad():
             params = [param.to(self.device) if torch.is_tensor(param) else param for param in batch]
-            params[0] = self.model(params[0])
+            params[0] = self.model(*params)
         return params
