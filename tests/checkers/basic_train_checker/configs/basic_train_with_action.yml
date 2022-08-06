@@ -1,0 +1,90 @@
+data:
+  train:
+    module: torch.utils.data
+    name: DataLoader
+    kwargs:
+      dataset:
+        module: torchvision.datasets
+        name: MNIST
+        kwargs:
+          root: tempfile.gettempdir()
+          train: True
+          download: True
+          transform: 'transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.1307,), (0.3081,)),
+            transforms.Lambda(lambda x: x.repeat(3, 1, 1)),
+          ])'
+      batch_size: 32
+
+model:
+  module: torchvision.models
+  name: MobileNetV2
+  kwargs:
+    num_classes: 10
+
+optimizer:
+  module: torch.optim
+  name: SGD
+  kwargs:
+    params: model.parameters()
+    lr: 0.01
+    momentum: 0.9
+
+loss_fn:
+  module: flame.loss
+  name: Loss
+  kwargs:
+    loss_fn:
+      module: torch.nn
+      name: CrossEntropyLoss
+
+engine:
+  module: flame.engine
+  name: Trainer.factory
+  kwargs:
+    model: model
+    data: data.train
+    optimizer: optimizer
+    loss_fn: loss_fn
+    device: "'cpu'"
+    max_epochs: 2
+    epoch_length: 2
+
+terminate_on_nan:
+  example1:
+    module: ignite.handlers
+    name: TerminateOnNan
+    engine: engine
+    event: Events.ITERATION_COMPLETED
+  example2:
+    module: ignite.handlers
+    name: TerminateOnNan
+    event: Events.ITERATION_COMPLETED
+  examples:
+    - module: ignite.handlers
+      name: TerminateOnNan
+      event: Events.ITERATION_COMPLETED
+      function: __call__
+    - module: ignite.handlers
+      name: TerminateOnNan
+      event: Events.ITERATION_COMPLETED
+      akwargs:
+        engine: engine
+    - handler:
+        module: ignite.handlers
+        name: TerminateOnNan
+      event: Events.ITERATION_COMPLETED
+
+progress_bar:
+  module: flame.handlers
+  name: ProgressBar
+  kwargs:
+    trainer: engine
+
+extralibs:
+  tempfile: tempfile
+  transforms: torchvision.transforms
+  Events:
+    module: ignite.engine
+    name: Events

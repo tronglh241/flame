@@ -1,15 +1,24 @@
 from typing import Dict, List
 
-from ignite.metrics.metric import Metric
+from ignite.metrics import Metric
 
-from flame.core.engine.engine import Engine
+from ..engine import Engine
+from .handler import Handler
 
 
-class Metrics:
-    def __init__(self, evaluators: List[Engine], metrics: Dict[str, Metric]):
-        super(Metrics, self).__init__()
+class Metrics(Handler):
+    def __init__(
+        self,
+        evaluators: List[Engine],
+        metrics: Dict[str, Metric],
+    ):
         self.evaluators = evaluators
         self.metrics = metrics
+        action = {
+            'event': None,
+            'func': self,
+        }
+        super(Metrics, self).__init__(actions=[action])
 
     def __call__(self) -> None:
         for evaluator in self.evaluators:

@@ -1,0 +1,38 @@
+engine:
+  module: flame.engine
+  name: Engine
+  kwargs:
+    data:
+      - - torch.tensor([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+        - torch.tensor([0, 1, 0, 1, 0, 1, 0, 1, 1, 1])
+    model: null
+    process_function: 'lambda e, b: (b[0] % 2, b[1])'
+    max_epochs: 10
+
+metrics:
+  module: flame.handlers
+  name: Metrics
+  kwargs:
+    evaluators:
+      - engine
+    metrics:
+      accuracy:
+        module: ignite.metrics
+        name: Accuracy
+
+early_stopping:
+  module: flame.handlers
+  name: EarlyStopping
+  kwargs:
+    patience: 3
+    score_name: "'accuracy'"
+    mode: "'max'"
+    trainer: engine
+    evaluator: engine
+  event: Events.EPOCH_COMPLETED
+
+extralibs:
+  torch: torch
+  Events:
+    module: ignite.engine
+    name: Events

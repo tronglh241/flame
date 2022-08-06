@@ -1,0 +1,262 @@
+data:
+  train:
+    module: torch.utils.data
+    name: DataLoader
+    kwargs:
+      dataset:
+        module: torchvision.datasets
+        name: MNIST
+        kwargs:
+          root: "'data/'"
+          train: True
+          download: True
+          transform: 'transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.1307,), (0.3081,)),
+            transforms.Lambda(lambda x: x.repeat(3, 1, 1)),
+          ])'
+      shuffle: True
+      batch_size: 64
+
+  train_eval:
+    module: torch.utils.data
+    name: DataLoader
+    kwargs:
+      dataset:
+        module: torchvision.datasets
+        name: MNIST
+        kwargs:
+          root: "'data/'"
+          train: True
+          download: True
+          transform: 'transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.1307,), (0.3081,)),
+            transforms.Lambda(lambda x: x.repeat(3, 1, 1)),
+          ])'
+      shuffle: False
+      batch_size: 64
+
+  valid:
+    module: torch.utils.data
+    name: DataLoader
+    kwargs:
+      dataset:
+        module: torchvision.datasets
+        name: MNIST
+        kwargs:
+          root: "'data/'"
+          train: False
+          download: True
+          transform: 'transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.1307,), (0.3081,)),
+            transforms.Lambda(lambda x: x.repeat(3, 1, 1)),
+          ])'
+      shuffle: False
+      batch_size: 64
+
+model:
+  module: torchvision.models
+  name: MobileNetV2
+  kwargs:
+    num_classes: 10
+
+optimizer:
+  module: torch.optim
+  name: SGD
+  kwargs:
+    params: model.parameters()
+    lr: 0.01
+    momentum: 0.9
+
+loss_fn:
+  module: flame.loss
+  name: Loss
+  kwargs:
+    loss_fn:
+      module: torch.nn
+      name: CrossEntropyLoss
+
+engine:
+  module: flame.engine
+  name: Trainer.factory
+  kwargs:
+    model: model
+    data: data.train
+    optimizer: optimizer
+    loss_fn: loss_fn
+    device: "'cuda'"
+    max_epochs: 100
+
+evaluators:
+  train:
+    module: flame.engine
+    name: Evaluator.factory
+    kwargs:
+      model: model
+      data: data.train_eval
+      device: "'cuda'"
+    event: Events.EPOCH_COMPLETED
+    function: run
+
+  valid:
+    module: flame.engine
+    name: Evaluator.factory
+    kwargs:
+      model: model
+      data: data.valid
+      device: "'cuda'"
+    event: Events.EPOCH_COMPLETED
+    function: run
+
+metrics:
+  module: flame.handlers
+  name: Metrics
+  kwargs:
+    evaluators:
+      - evaluators.train
+      - evaluators.valid
+    metrics:
+      loss:
+        module: ignite.metrics
+        name: Loss
+        kwargs:
+          loss_fn:
+            module: torch.nn
+            name: CrossEntropyLoss
+      accuracy:
+        module: ignite.metrics
+        name: Accuracy
+      precision:
+        module: ignite.metrics
+        name: Precision
+        kwargs:
+          average: True
+
+lr_scheduler:
+  module: ignite.handlers.param_scheduler
+  name: LRScheduler
+  kwargs:
+    lr_scheduler:
+      module: torch.optim.lr_scheduler
+      name: StepLR
+      kwargs:
+        optimizer: optimizer
+        step_size: 3
+        gamma: 0.8
+  event: Events.EPOCH_COMPLETED
+
+logging:
+  progress_bar:
+    module: flame.handlers
+    name: ProgressBar
+    kwargs:
+      trainer: engine
+      evaluators:
+        train: evaluators.train
+        valid: evaluators.valid
+
+  tensorboard:
+    module: flame.handlers
+    name: Tensorboard
+    kwargs:
+      log_dir: "'logs/'"
+      logger_handlers:
+        - engine: engine
+          event_name: Events.EPOCH_COMPLETED
+          log_handler:
+            module: ignite.contrib.handlers.tensorboard_logger
+            name: OptimizerParamsHandler
+            kwargs:
+              optimizer: optimizer
+        - engine: engine
+          event_name: Events.ITERATION_COMPLETED
+          log_handler:
+            module: ignite.contrib.handlers.tensorboard_logger
+            name: OutputHandler
+            kwargs:
+              tag: "'training'"
+              output_transform: "lambda loss: {'loss': loss}"
+        - engine: evaluators.train
+          event_name: Events.EPOCH_COMPLETED
+          log_handler:
+            module: ignite.contrib.handlers.tensorboard_logger
+            name: OutputHandler
+            kwargs:
+              tag: "'evaluation/train'"
+              metric_names: "'all'"
+              global_step_transform: global_step_from_engine(engine, Events.EPOCH_COMPLETED)
+        - engine: evaluators.valid
+          event_name: Events.EPOCH_COMPLETED
+          log_handler:
+            module: ignite.contrib.handlers.tensorboard_logger
+            name: OutputHandler
+            kwargs:
+              tag: "'evaluation/valid'"
+              metric_names: "'all'"
+              global_step_transform: global_step_from_engine(engine, Events.EPOCH_COMPLETED)
+
+early_stopping:
+  module: flame.handlers
+  name: EarlyStopping
+  kwargs:
+    patience: 5
+    score_name: "'accuracy'"
+    mode: "'max'"
+    trainer: engine
+    evaluator: evaluators.valid
+  event: Events.EPOCH_COMPLETED
+
+checkpoint:
+  best:
+    module: flame.handlers
+    name: BestCheckpoint
+    kwargs:
+      engine: evaluators.valid
+      event: Events.EPOCH_COMPLETED
+      modules:
+        - "'model'"
+      dirname: "'checkpoints/'"
+      score_name: "'accuracy'"
+      mode: "'max'"
+      n_saved: 1
+      global_step_transform: global_step_from_engine(engine, Events.EPOCH_COMPLETED)
+
+  backup:
+    module: flame.handlers
+    name: BackupCheckpoint
+    kwargs:
+      engine: engine
+      event: Events.EPOCH_COMPLETED
+      modules:
+        - "'model'"
+        - "'engine'"
+        - "'optimizer'"
+        - "'early_stopping'"
+        - "'lr_scheduler'"
+        - "'checkpoint.best'"
+      dirname: "'checkpoints/'"
+      n_saved: 1
+      global_step_transform: global_step_from_engine(engine, Events.EPOCH_COMPLETED)
+
+  loader:
+    module: flame.handlers
+    name: CheckpointLoader
+    kwargs:
+      path: null
+
+  config_backup:
+    module: flame.handlers
+    name: ConfigBackup
+    kwargs:
+      backup_checkpoint: checkpoint.backup
+
+extralibs:
+  transforms: torchvision.transforms
+  Events:
+    module: ignite.engine
+    name: Events
+  global_step_from_engine:
+    module: ignite.handlers
+    name: global_step_from_engine
