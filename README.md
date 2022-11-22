@@ -1,6 +1,6 @@
 # flame
 
-![PyPI - Python Version](https://img.shields.io/pypi/pyversions/torch) ![GitHub](https://img.shields.io/github/license/tronglh241/flame) ![GitHub Repo stars](https://img.shields.io/github/stars/tronglh241/flame) ![GitHub forks](https://img.shields.io/github/forks/tronglh241/flame)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/torch) ![GitHub](https://img.shields.io/github/license/tronglh241/flame) ![GitHub Repo stars](https://img.shields.io/github/stars/tronglh241/flame) ![GitHub forks](https://img.shields.io/github/forks/tronglh241/flame) [![Tests](https://github.com/tronglh241/flame/actions/workflows/tests.yml/badge.svg)](https://github.com/tronglh241/flame/actions/workflows/tests.yml) [![codecov](https://codecov.io/gh/tronglh241/flame/branch/master/graph/badge.svg?token=FF3UAKNLPF)](https://codecov.io/gh/tronglh241/flame)
 
 Flame is a library that helps develop neural networks fast and flexibly. It is built on PyTorch Ignite, a high-level library in PyTorch Ecosystem.
 

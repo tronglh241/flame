@@ -99,7 +99,7 @@ class ProgressBar(Handler):
 
         for evaluator_name, evaluator in evaluators.items():
             for metric_name, metric_value in evaluator.state.metrics.items():
-                if self.metric_names and metric_name in self.metric_names:
+                if self.metric_names is None or metric_name in self.metric_names:
                     msg += f'{evaluator_name}_{metric_name}: {metric_value:.4f} - '
 
         tqdm.write(msg[:-3])
