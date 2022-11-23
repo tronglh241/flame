@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import argparse
 from enum import Enum
-from typing import Callable, Dict
+from typing import Callable, Dict, MutableMapping, Optional
 
 from .init import init
 from .run import run
@@ -25,7 +25,7 @@ class Cmd(str, Enum):
         return Cmd.cmds()[cmd]
 
 
-def cli():
+def cli(return_context: bool = False) -> Optional[MutableMapping]:
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest='cmd', required=True)
 
@@ -50,4 +50,10 @@ def cli():
 
     args = vars(parser.parse_args())
     cmd_executor = Cmd.executor(args.pop('cmd'))
-    return cmd_executor(**args)
+
+    context = cmd_executor(**args)
+
+    if not return_context:
+        context = None
+
+    return context

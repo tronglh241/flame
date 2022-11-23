@@ -13,7 +13,7 @@ class Checker(ABC):
     def execute_command(self) -> MutableMapping:
         sys_argv = sys.argv
         sys.argv = self.command.split()
-        context = cli()
+        context = cli(return_context=True)
         sys.argv = sys_argv
         return context
 
