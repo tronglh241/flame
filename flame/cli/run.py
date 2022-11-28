@@ -1,6 +1,6 @@
 from collections import ChainMap
 from importlib import import_module
-from typing import Callable, List, MutableMapping, Tuple
+from typing import Callable, List, MutableMapping, Optional, Tuple
 
 from yacs.config import CfgNode
 
@@ -15,6 +15,8 @@ def create_action(func: Callable, config: CfgNode) -> Action:
         'func': func,
         'akwargs': config.get(Keyword.AKWARGS, {}),
         'eval_kwargs': True,
+        'rank': config.get(Keyword.RANK, 0),
+        'barrier': config.get(Keyword.BARRIER, False),
     }
 
     if Keyword.ENGINE in config:
@@ -100,15 +102,34 @@ def setup(config: CfgNode) -> Tuple[Engine, List[Action], MutableMapping]:
     return engine, actions, context
 
 
-def run(file: str) -> MutableMapping:
-    with open(file) as f:
-        config = CfgNode.load_cfg(f)
-
-    config[Keyword.CONFIG] = file
+def simple_run(config: CfgNode) -> MutableMapping:
     engine, actions, context = setup(config)
 
     for action in actions:
         action.attach(context)
 
     engine.run()
+
+    return context
+
+
+def parallel_run(local_rank: int, config: CfgNode) -> MutableMapping:
+    return simple_run(config)
+
+
+def run(file: str) -> Optional[MutableMapping]:
+    with open(file) as f:
+        config = CfgNode.load_cfg(f)
+
+    config[Keyword.CONFIG] = file
+    context = None
+
+    if 'launcher' in config:
+        launcher, _ = reval(config.pop('launcher'))
+
+        with launcher:
+            launcher.run(parallel_run, config=config)
+    else:
+        context = simple_run(config)
+
     return context

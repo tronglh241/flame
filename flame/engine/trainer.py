@@ -40,7 +40,6 @@ class Trainer(Engine):
         scaler: Union[bool, "torch.cuda.amp.GradScaler"] = False,
         gradient_accumulation_steps: int = 1,
     ) -> Trainer:
-
         device_type = device.type if isinstance(device, torch.device) else device
         on_tpu = "xla" in device_type if device_type is not None else False
         mode, _scaler = ie._check_arg(on_tpu, amp_mode, scaler)

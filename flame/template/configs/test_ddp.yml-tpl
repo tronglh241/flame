@@ -1,0 +1,105 @@
+data:
+  test:
+    module: ignite.distributed.auto
+    name: auto_dataloader
+    kwargs:
+      dataset:
+        module: torchvision.datasets
+        name: MNIST
+        kwargs:
+          root: "'data/'"
+          train: False
+          download: True
+          transform: 'transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.1307,), (0.3081,)),
+            transforms.Lambda(lambda x: x.repeat(3, 1, 1)),
+          ])'
+      shuffle: False
+      batch_size: 128
+
+model:
+  module: ignite.distributed.auto
+  name: auto_model
+  kwargs:
+    model:
+      module: torchvision.models
+      name: MobileNetV2
+      kwargs:
+        num_classes: 10
+    sync_bn: True
+
+engine:
+  module: flame.engine
+  name: Evaluator.factory
+  kwargs:
+    model: model
+    data: data.test
+    device: "'cuda'"
+
+launcher:
+  module: ignite.distributed
+  name: Parallel
+  kwargs:
+    backend: "'nccl'"
+    nproc_per_node: 2
+    nnodes: null
+    node_rank: null
+    master_addr: null
+    master_port: null
+
+metrics:
+  module: flame.handlers
+  name: Metrics
+  kwargs:
+    evaluators:
+      - engine
+    metrics:
+      accuracy:
+        module: ignite.metrics
+        name: Accuracy
+      precision:
+        module: ignite.metrics
+        name: Precision
+        kwargs:
+          average: True
+
+logging:
+  progress_bar:
+    module: flame.handlers
+    name: ProgressBar
+    kwargs:
+      evaluators:
+        test: engine
+
+  tensorboard:
+    module: flame.handlers
+    name: Tensorboard
+    kwargs:
+      log_dir: "'logs/'"
+      logger_handlers:
+        - engine: engine
+          event_name: Events.EPOCH_COMPLETED
+          log_handler:
+            module: ignite.contrib.handlers.tensorboard_logger
+            name: OutputHandler
+            kwargs:
+              tag: "'evaluation/test'"
+              metric_names: "'all'"
+              global_step_transform: global_step_from_engine(engine, Events.EPOCH_COMPLETED)
+
+checkpoint:
+  loader:
+    module: flame.handlers
+    name: CheckpointLoader
+    kwargs:
+      path: null
+
+extralibs:
+  transforms: torchvision.transforms
+  Events:
+    module: ignite.engine
+    name: Events
+  global_step_from_engine:
+    module: ignite.handlers
+    name: global_step_from_engine

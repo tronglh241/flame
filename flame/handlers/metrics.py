@@ -17,6 +17,7 @@ class Metrics(Handler):
         action = {
             'event': None,
             'func': self,
+            'rank': -1,
         }
         super(Metrics, self).__init__(actions=[action])
 

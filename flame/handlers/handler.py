@@ -1,5 +1,6 @@
 from typing import Any, Callable, Dict, List, MutableMapping, Union
 
+import ignite.distributed as idist
 from ignite.engine.utils import _check_signature
 
 from ..engine import Engine
@@ -32,6 +33,8 @@ class Action:
         akwargs: Dict[str, Any] = None,
         eval_kwargs: Union[bool, List[bool]] = False,
         env: MutableMapping = None,
+        rank: int = 0,
+        barrier: bool = False,
     ):
         super(Action, self).__init__()
         self.event = event
@@ -40,6 +43,8 @@ class Action:
         self.kwargs = akwargs if akwargs is not None else {}
         self.eval_kwargs = eval_kwargs
         self.env = env
+        self.rank = rank
+        self.barrier = barrier
         self.needs_engine = True
 
     def attach(self, env: MutableMapping = None) -> None:
@@ -55,16 +60,16 @@ class Action:
 
         self.needs_engine = self.check_signature()
 
-        if not self.eval_kwargs:
-            if self.event is not None:
-                if not self.engine.has_event_handler(self.func, self.event):
-                    self.engine.add_event_handler(self.event, self.func, **self.kwargs)
+        if self.rank >= 0:
+            self.func = idist.one_rank_only(
+                rank=self.rank,
+                with_barrier=self.barrier,
+            )(self.func)
 
-        else:
-            if self.event is not None:
+        if self.event is not None:
+            if not self.engine.has_event_handler(self, self.event):
                 self.engine.add_event_handler(self.event, self, **self.kwargs)
-
-        if self.event is None:
+        else:
             self(**self.kwargs)
 
     def check_signature(self) -> bool:

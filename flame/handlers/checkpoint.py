@@ -7,6 +7,7 @@ from typing import Any, Callable, List, MutableMapping, Tuple, Union
 import torch
 from ignite.engine import Events
 from ignite.handlers import ModelCheckpoint as _ModelCheckpoint
+from torch import nn
 
 from ..engine import Engine
 from ..keyword import Keyword
@@ -149,6 +150,7 @@ class CheckpointLoader(Handler):
                     True,
                     False,
                 ],
+                'rank': -1,
             }
             actions.append(action)
 
@@ -168,6 +170,9 @@ class CheckpointLoader(Handler):
             state_dicts = checkpoint.values()
 
         for module, state_dict in zip(modules, state_dicts):
+            if isinstance(module, (nn.DataParallel, nn.parallel.DistributedDataParallel)):
+                module = module.module
+
             module.load_state_dict(state_dict)
 
 
