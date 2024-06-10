@@ -19,24 +19,28 @@ class Evaluator(Engine):
         device: Union[str, torch.device] = None,
         max_epochs: int = None,
         epoch_length: int = None,
-        seed: int = None,
         non_blocking: bool = False,
         prepare_batch: Callable = _prepare_batch,
+        model_transform: Callable[[Any], Any] = lambda output: output,
         output_transform: Callable[[Any, Any, Any], Any] = lambda x, y, y_pred: (y_pred, *y),
         amp_mode: str = None,
+        model_fn: Callable[[torch.nn.Module, Any], Any] = lambda model, x: model(x),
     ) -> Evaluator:
         device_type = device.type if isinstance(device, torch.device) else device
-        on_tpu = "xla" in device_type if device_type is not None else False
-        mode, _ = ie._check_arg(on_tpu, amp_mode, None)
+        on_tpu = 'xla' in device_type if device_type is not None else False
+        on_mps = 'mps' in device_type if device_type is not None else False
+        mode, _ = ie._check_arg(on_tpu, on_mps, amp_mode, None)
         model.to(device)
 
-        if mode == "amp":
+        if mode == 'amp':
             evaluate_step = ie.supervised_evaluation_step_amp(
                 model=model,
                 device=device,
                 non_blocking=non_blocking,
                 prepare_batch=prepare_batch,
+                model_transform=model_transform,
                 output_transform=output_transform,
+                model_fn=model_fn,
             )
         else:
             evaluate_step = ie.supervised_evaluation_step(
@@ -44,7 +48,9 @@ class Evaluator(Engine):
                 device=device,
                 non_blocking=non_blocking,
                 prepare_batch=prepare_batch,
+                model_transform=model_transform,
                 output_transform=output_transform,
+                model_fn=model_fn,
             )
 
         evaluator = Evaluator(
@@ -54,7 +60,6 @@ class Evaluator(Engine):
             device=device,
             max_epochs=max_epochs,
             epoch_length=epoch_length,
-            seed=seed,
         )
 
         return evaluator

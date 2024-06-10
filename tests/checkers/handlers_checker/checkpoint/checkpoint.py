@@ -14,6 +14,8 @@ class BestCheckpointChecker(Checker):
 
     def check(self) -> None:
         context = self.execute_command()
+
+        assert context is not None
         best_checkpoint_accuracy = context['best_checkpoint_accuracy']
         best_checkpoint_precision = context['best_checkpoint_precision']
 
@@ -44,6 +46,8 @@ class BackupCheckpointChecker(Checker):
 
     def check(self) -> None:
         context = self.execute_command()
+
+        assert context is not None
         backup_checkpoint = context['backup_checkpoint']
 
         assert (backup_checkpoint.checkpointer.save_handler
@@ -66,6 +70,8 @@ class CheckpointLoaderModelChecker(Checker):
         model = MobileNetV2(num_classes=10)
         torch.save(model.state_dict(), tempfile.gettempdir() + '/model.pt')
         context = self.execute_command()
+
+        assert context is not None
         loaded_model = context['model']
 
         assert all(torch.all(p == lp) for p, lp in zip(model.parameters(), loaded_model.parameters()))

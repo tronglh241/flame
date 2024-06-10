@@ -12,6 +12,8 @@ class EarlyStoppingMaxChecker(Checker):
 
     def check(self) -> None:
         context = self.execute_command()
+
+        assert context is not None
         engine = context['engine']
 
         assert engine.state.epoch < engine.state.max_epochs
@@ -26,6 +28,8 @@ class EarlyStoppingMinChecker(Checker):
 
     def check(self) -> None:
         context = self.execute_command()
+
+        assert context is not None
         engine = context['engine']
 
         assert engine.state.epoch < engine.state.max_epochs

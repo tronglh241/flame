@@ -9,7 +9,7 @@ def _prepare_batch(
     batch: Sequence[Any],
     device: Union[str, torch.device] = None,
     non_blocking: bool = False,
-) -> Tuple[Any, Any]:
+) -> Tuple[Any, Sequence[Any]]:
     batch = list(batch)
 
     for i, item in enumerate(batch):

@@ -15,7 +15,6 @@ class Engine(_Engine):
         device: Union[str, torch.device] = None,
         max_epochs: int = None,
         epoch_length: int = None,
-        seed: int = None,
     ):
         super(Engine, self).__init__(process_function)
         self.data = data
@@ -23,12 +22,10 @@ class Engine(_Engine):
         self.device = device
         self.max_epochs = max_epochs
         self.epoch_length = epoch_length
-        self.seed = seed
 
     def run(self) -> None:
         super(Engine, self).run(
             data=self.data,
             max_epochs=self.max_epochs,
             epoch_length=self.epoch_length,
-            seed=self.seed,
         )

@@ -13,7 +13,7 @@ class BasicTrainChecker(Checker):
         return cmd
 
     def check(self) -> None:
-        self.execute_command()
+        self.execute_command(return_context=False)
 
 
 class BasicTrainNoEngineChecker(Checker):

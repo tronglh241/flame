@@ -17,6 +17,25 @@ data:
           ])'
       batch_size: 32
 
+  train_eval:
+    module: torch.utils.data
+    name: DataLoader
+    kwargs:
+      dataset:
+        module: torchvision.datasets
+        name: MNIST
+        kwargs:
+          root: tempfile.gettempdir()
+          train: True
+          download: True
+          transform: 'transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.1307,), (0.3081,)),
+            transforms.Lambda(lambda x: x.repeat(3, 1, 1)),
+          ])'
+      shuffle: False
+      batch_size: 32
+
 model:
   module: torchvision.models
   name: MobileNetV2
@@ -50,6 +69,17 @@ engine:
     device: "'cpu'"
     max_epochs: 2
     epoch_length: 2
+
+evaluators:
+  train:
+    module: flame.engine
+    name: Evaluator.factory
+    kwargs:
+      model: model
+      data: data.train_eval
+      device: "'cpu'"
+    event: Events.EPOCH_COMPLETED
+    function: run
 
 terminate_on_nan:
   example1:

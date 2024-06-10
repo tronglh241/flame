@@ -32,21 +32,23 @@ class Trainer(Engine):
         device: Union[str, torch.device] = None,
         max_epochs: int = None,
         epoch_length: int = None,
-        seed: int = None,
         non_blocking: bool = False,
         prepare_batch: Callable = _prepare_batch,
+        model_transform: Callable[[Any], Any] = lambda output: output,
         output_transform: Callable[[Any, Any, Any, torch.Tensor], Any] = lambda x, y, y_pred, loss: loss.item(),
         amp_mode: str = None,
-        scaler: Union[bool, "torch.cuda.amp.GradScaler"] = False,
+        scaler: Union[bool, 'torch.cuda.amp.GradScaler'] = False,
         gradient_accumulation_steps: int = 1,
+        model_fn: Callable[[torch.nn.Module, Any], Any] = lambda model, x: model(x),
     ) -> Trainer:
         device_type = device.type if isinstance(device, torch.device) else device
-        on_tpu = "xla" in device_type if device_type is not None else False
-        mode, _scaler = ie._check_arg(on_tpu, amp_mode, scaler)
+        on_tpu = 'xla' in device_type if device_type is not None else False
+        on_mps = 'mps' in device_type if device_type is not None else False
+        mode, _scaler = ie._check_arg(on_tpu, on_mps, amp_mode, scaler)
         model.to(device)
         loss_fn = _loss_fn(loss_fn)
 
-        if mode == "amp":
+        if mode == 'amp':
             _update = ie.supervised_training_step_amp(
                 model=model,
                 optimizer=optimizer,
@@ -54,11 +56,13 @@ class Trainer(Engine):
                 device=device,
                 non_blocking=non_blocking,
                 prepare_batch=prepare_batch,
+                model_transform=model_transform,
                 output_transform=output_transform,
                 scaler=_scaler,
                 gradient_accumulation_steps=gradient_accumulation_steps,
+                model_fn=model_fn,
             )
-        elif mode == "apex":
+        elif mode == 'apex':
             _update = ie.supervised_training_step_apex(
                 model=model,
                 optimizer=optimizer,
@@ -66,10 +70,12 @@ class Trainer(Engine):
                 device=device,
                 non_blocking=non_blocking,
                 prepare_batch=prepare_batch,
+                model_transform=model_transform,
                 output_transform=output_transform,
                 gradient_accumulation_steps=gradient_accumulation_steps,
+                model_fn=model_fn,
             )
-        elif mode == "tpu":
+        elif mode == 'tpu':
             _update = ie.supervised_training_step_tpu(
                 model=model,
                 optimizer=optimizer,
@@ -77,8 +83,10 @@ class Trainer(Engine):
                 device=device,
                 non_blocking=non_blocking,
                 prepare_batch=prepare_batch,
+                model_transform=model_transform,
                 output_transform=output_transform,
                 gradient_accumulation_steps=gradient_accumulation_steps,
+                model_fn=model_fn,
             )
         else:
             _update = ie.supervised_training_step(
@@ -88,8 +96,10 @@ class Trainer(Engine):
                 device=device,
                 non_blocking=non_blocking,
                 prepare_batch=prepare_batch,
+                model_transform=model_transform,
                 output_transform=output_transform,
                 gradient_accumulation_steps=gradient_accumulation_steps,
+                model_fn=model_fn,
             )
 
         trainer = Trainer(
@@ -101,7 +111,6 @@ class Trainer(Engine):
             device=device,
             max_epochs=max_epochs,
             epoch_length=epoch_length,
-            seed=seed,
         )
 
         if _scaler and scaler and isinstance(scaler, bool):

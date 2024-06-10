@@ -48,7 +48,7 @@ class ModelCheckpoint(Handler):
         dirname = Path(self.checkpointer.save_handler.dirname)
 
         # Fake saved
-        for _, file in state_dict['saved']:
+        for _, file in state_dict['_saved']:
             dirname.joinpath(file).touch()
 
         self.checkpointer.load_state_dict(state_dict)

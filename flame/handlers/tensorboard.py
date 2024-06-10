@@ -43,4 +43,9 @@ class Tensorboard(Handler):
             'func': self.logger.writer.flush,
         })
 
+        actions.append({
+            'event': Events.COMPLETED,
+            'func': self.logger.writer.close,
+        })
+
         super(Tensorboard, self).__init__(actions=actions)
