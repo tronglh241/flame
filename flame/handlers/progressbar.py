@@ -10,6 +10,47 @@ from .handler import Handler
 
 
 class ProgressBar(Handler):
+    '''
+    A handler that attaches progress bars to a trainer and multiple evaluator engines using Ignite's
+    contrib ProgressBar, and optionally logs evaluator metrics after each epoch.
+
+    This handler helps visualize training progress for the trainer engine and evaluation progress for
+    one or more evaluator engines. It supports configuring progress bar parameters separately for the
+    trainer and evaluators. Additionally, it can print evaluator metrics to the console at the end of
+    each evaluation epoch using `tqdm.write`.
+
+    Args:
+        trainer (Engine, optional): Ignite Engine instance for training. If provided, a progress bar
+            is attached to this engine.
+        evaluators (Dict[str, Engine], optional): A dictionary mapping evaluator names to Ignite Engine
+            instances. Progress bars will be attached to all evaluators.
+        trainer_pbar_kwargs (Dict[str, Any], optional): Keyword arguments passed to the trainer's
+            progress bar constructor. Defaults to an empty dict.
+        evaluators_pbar_kwargs (Union[Dict[str, Any], List[Dict[str, Any]]], optional): Keyword arguments
+            for evaluators' progress bars. Can be a single dict applied to all evaluators or a list of dicts
+            specifying each evaluator's arguments. Defaults to `{'desc': 'Evaluating'}`.
+        trainer_pbar_akwargs (Dict[str, Any], optional): Additional keyword arguments passed to the
+            `attach` method of the trainer progress bar, such as `output_transform`.
+        evaluators_pbar_akwargs (Union[Dict[str, Any], List[Dict[str, Any]]], optional): Additional keyword
+            arguments for evaluators' progress bars passed to their `attach` methods.
+        metric_names (List[str], optional): List of metric names to log after evaluation epochs.
+            If `None`, logs all metrics.
+
+    Example:
+        ```python
+        progress_bar = ProgressBar(
+            trainer=trainer_engine,
+            evaluators={'val': val_engine, 'test': test_engine},
+            metric_names=['accuracy', 'loss']
+        )
+        ```
+
+    Notes:
+        - Logs evaluator metrics at the end of each evaluation epoch using `tqdm.write`.
+        - Supports attaching progress bars to multiple engines in distributed or single-process settings.
+        - Uses Ignite's `ProgressBar` from `ignite.contrib.handlers`.
+    '''
+
     def __init__(
         self,
         trainer: Engine = None,

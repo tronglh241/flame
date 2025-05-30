@@ -13,6 +13,18 @@ from .utils import _loss_fn, _prepare_batch
 
 
 class Trainer(Engine):
+    '''
+    Custom Trainer Engine for supervised training.
+
+    This class encapsulates the training logic and stores references to the
+    optimizer and loss function used in the training loop.
+
+    Args:
+        optimizer (torch.optim.Optimizer): Optimizer used to update model parameters.
+        loss_fn (Callable): Loss function used to compute training loss.
+        **kwargs: Additional keyword arguments passed to the parent Engine class.
+    '''
+
     def __init__(
         self,
         optimizer: Optimizer,
@@ -41,6 +53,36 @@ class Trainer(Engine):
         gradient_accumulation_steps: int = 1,
         model_fn: Callable[[torch.nn.Module, Any], Any] = lambda model, x: model(x),
     ) -> Trainer:
+        '''
+        Factory method for creating a `Trainer` instance for supervised training.
+
+        This method sets up the appropriate training step function depending on the device
+        (CPU/GPU/TPU), AMP mode, and gradient scaling configuration.
+
+        Args:
+            model (torch.nn.Module): The model to train.
+            data (torch.utils.data.DataLoader): The training data loader.
+            optimizer (torch.optim.Optimizer): The optimizer used for parameter updates.
+            loss_fn (Union[Callable, torch.nn.Module]): The loss function used during training.
+            device (Union[str, torch.device], optional): The device to run training on.
+                Can be a string or a torch.device instance.
+            max_epochs (int, optional): Number of epochs to run. If None, defaults to 1.
+            epoch_length (int, optional): Number of iterations per epoch. If None, it's automatically
+                determined from the data loader.
+            non_blocking (bool): Whether to use non-blocking data transfer to the device.
+            prepare_batch (Callable): Function to convert a batch into input/output tensors.
+            model_transform (Callable): Optional transform to apply to the model output before loss computation.
+            output_transform (Callable): Function that processes `x`, `y`, `y_pred`, `loss` and returns a
+                value stored in `engine.state.output` after each iteration.
+            amp_mode (str, optional): AMP mode for mixed precision training. Can be 'amp' or 'apex'.
+            scaler (Union[bool, torch.cuda.amp.GradScaler]): Gradient scaler used with AMP. If True,
+                a default GradScaler will be created.
+            gradient_accumulation_steps (int): Number of steps to accumulate gradients before updating weights.
+            model_fn (Callable): A callable that takes `model` and input tensor `x`, and returns the predictions.
+
+        Returns:
+            Trainer: An instance of `Trainer` initialized with the configured training engine.
+        '''
         device_type = device.type if isinstance(device, torch.device) else device
         on_tpu = 'xla' in device_type if device_type is not None else False
         on_mps = 'mps' in device_type if device_type is not None else False

@@ -9,6 +9,28 @@ from .handler import Handler
 
 
 class Tensorboard(Handler):
+    '''
+    A handler to integrate Ignite engines with TensorBoard logging using Ignite's TensorboardLogger.
+
+    This class initializes a TensorBoard logger with an optional log directory timestamped by current datetime,
+    attaches multiple logger handlers to specified engines, and ensures proper flushing and closing of
+    the TensorBoard writer at appropriate Ignite events.
+
+    Args:
+        log_dir (str, optional): Base directory path for TensorBoard logs. If provided, a timestamp
+            in the format YYMMDDHHMMSS will be appended to create a unique subdirectory.
+        logger_handlers (List[Dict[str, Any]]): A list of dictionaries specifying logger handler configurations.
+            Each dictionary can contain any keyword arguments accepted by `TensorboardLogger.attach()`,
+            including an optional 'engine' key to specify which Ignite Engine to attach to.
+        **kwargs: Additional keyword arguments passed to the `TensorboardLogger` constructor.
+
+    Behavior:
+        - Automatically appends a datetime-based suffix to `log_dir` if provided, to create unique runs.
+        - Attaches specified logger handlers to their engines at handler initialization.
+        - Flushes the TensorBoard writer after every epoch completion.
+        - Closes the TensorBoard writer upon completion of training.
+    '''
+
     def __init__(
         self,
         *,

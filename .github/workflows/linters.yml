@@ -25,7 +25,7 @@ on:
 jobs:
   flake8:
     name: flake8
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python
@@ -41,7 +41,7 @@ jobs:
 
   isort:
     name: isort
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python
@@ -58,7 +58,7 @@ jobs:
 
   mypy:
     name: mypy
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python

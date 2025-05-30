@@ -7,6 +7,18 @@ from torch.utils.data import DataLoader
 
 
 class Engine(_Engine):
+    '''
+    A custom extension of Ignite's Engine that binds a model and dataloader for training or evaluation.
+
+    Args:
+        data (DataLoader): The data loader that provides batches of input data.
+        model (Module): The PyTorch model to be trained or evaluated.
+        process_function (Callable[[Engine, Any], Any]): A function that processes one batch of data.
+        device (Union[str, torch.device], optional): Device on which the model runs (e.g., 'cpu', 'cuda').
+        max_epochs (int, optional): Maximum number of epochs to run. If None, defaults to 1.
+        epoch_length (int, optional): Number of iterations per epoch. If None, defaults to len(data).
+    '''
+
     def __init__(
         self,
         data: DataLoader,

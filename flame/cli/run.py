@@ -26,6 +26,53 @@ def create_action(func: Callable, config: CfgNode) -> Action:
 
 
 def reval(config: CfgNode, context: MutableMapping = None) -> Tuple[CfgNode, List[Action]]:
+    '''
+    Recursively evaluates a configuration tree, instantiating Python objects and collecting executable actions.
+
+    This function supports structured YAML/Dict configurations that describe objects and handlers
+    to be instantiated and evaluated dynamically. It returns the modified configuration object and
+    a list of `Action` instances that can be later executed or scheduled in an engine or loop.
+
+    Args:
+        config (CfgNode): A hierarchical configuration node (e.g., from a parsed YAML or a nested dict).
+        context (MutableMapping, optional): Optional evaluation context used when evaluating string expressions.
+            If not provided, `eval()` is performed in a restricted local context.
+
+    Returns:
+        Tuple[CfgNode, List[Action]]:
+            - The fully evaluated configuration, where any handler/module instantiations or string expressions
+              are replaced by actual Python objects.
+            - A list of `Action` objects extracted from handlers and explicitly defined config entries.
+
+    Behavior:
+        - Dicts: Recursively evaluates values unless keys are in `Keyword.NOT_EVAL`.
+        - Lists: Evaluates each element.
+        - Strings: Evaluated via `eval()` using the provided context.
+        - Module + Name: Imports and instantiates the specified object using optional kwargs.
+            May attach associated handler actions and events.
+        - Handler + Event: Builds an `Action` from the given callable and event info.
+
+    Raises:
+        KeyError: If both (`module`, `name`) and `handler` are provided in the same config block,
+            which is considered ambiguous.
+
+    Example:
+        ```yaml
+        my_handler:
+            module: mylib.handlers
+            name: MyHandler
+            kwargs:
+                value: 10
+            event: EPOCH_COMPLETED
+        ```
+
+        This block will be evaluated into an instance of `mylib.handlers.MyHandler(value=10)`
+        and an `Action` scheduled on the `EPOCH_COMPLETED` event.
+
+    Note:
+        - Supports integration with custom `Handler` classes that expose `actions` attributes.
+        - This evaluation logic enables declarative experiment setup via config files.
+    '''
     actions = []
 
     if isinstance(config, dict):
@@ -67,7 +114,7 @@ def reval(config: CfgNode, context: MutableMapping = None) -> Tuple[CfgNode, Lis
         config = eles
 
     elif isinstance(config, str):
-        config = eval(config, {}, context)
+        config = eval(config, {**context} if context is not None else None)
 
     return config, actions
 
