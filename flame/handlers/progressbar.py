@@ -137,10 +137,15 @@ class ProgressBar(Handler):
 
     def log_metrics(self, engine: Engine, evaluators: Dict[str, Engine]) -> None:
         msg = f'Epoch #{engine.state.epoch} - {time.asctime()} - '
+        metric_msgs = []
 
         for evaluator_name, evaluator in evaluators.items():
             for metric_name, metric_value in evaluator.state.metrics.items():
                 if self.metric_names is None or metric_name in self.metric_names:
-                    msg += f'{evaluator_name}_{metric_name}: {metric_value:.4f} - '
+                    if isinstance(metric_value, dict):
+                        for name, value in metric_value.items():
+                            metric_msgs.append(f'{evaluator_name}_{metric_name}_{name}: {value:.4f}')
+                    else:
+                        metric_msgs.append(f'{evaluator_name}_{metric_name}: {metric_value:.4f}')
 
-        tqdm.write(msg[:-3])
+        tqdm.write(msg + ' - '.join(metric_msgs))
