@@ -136,8 +136,8 @@ class ProgressBar(Handler):
         super(ProgressBar, self).__init__(actions=actions)
 
     def log_metrics(self, engine: Engine, evaluators: Dict[str, Engine]) -> None:
-        msg = f'Epoch #{engine.state.epoch} - {time.asctime()} - '
-        metric_msgs = []
+        msg = f'Epoch #{engine.state.epoch} - {time.asctime()}'
+        metric_msgs = ['']
 
         for evaluator_name, evaluator in evaluators.items():
             for metric_name, metric_value in evaluator.state.metrics.items():
